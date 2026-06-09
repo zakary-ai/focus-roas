@@ -294,6 +294,32 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
+function AdField({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={
+          (mono ? "font-mono text-xs break-all " : "") +
+          (value ? "text-foreground" : "italic text-muted-foreground")
+        }
+      >
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
 function MiniMetricChart({
   series,
   dataKey,
