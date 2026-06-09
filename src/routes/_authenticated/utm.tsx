@@ -128,7 +128,6 @@ function CampaignBuilderPage() {
   const remote = useMutation({
     mutationFn: (input: {
       campaignName: string;
-      dailyBudget: number;
       lifetimeBudgetMicros: number;
       headline: string;
       body: string;
@@ -442,7 +441,6 @@ function CampaignBuilderPage() {
                         }
                         remote.mutate({
                           campaignName: result.campaignName,
-                          dailyBudget: result.dailyBudget,
                           lifetimeBudgetMicros: result.lifetimeBudgetMicros,
                           headline: selectedHeadline,
                           body: selectedBody,
