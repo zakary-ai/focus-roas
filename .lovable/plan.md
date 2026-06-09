@@ -1,88 +1,42 @@
+# Plan
 
-# ROAS.ai — Build Plan
+## 1. Fix "Store URL" validation in onboarding (Step 2)
 
-A SaaS app for managing OpenAI Ads ROAS. Email/password + Google sign-in, onboarding wizard, and a 4-page authenticated app. Since OpenAI Ads has no public API, the integration uses realistic **mock data** via server functions, structured so the real API can be dropped in later by editing a single module.
+Currently the input requires a full URL like `https://www.saraglove.com`, so typing `www.saraglove.com` fails with `Invalid url`.
 
-## Stack & architecture
-- TanStack Start (React + TS) + Tailwind (already scaffolded)
-- Lovable Cloud (Supabase) for auth, DB, server-side API access
-- All "OpenAI Ads" calls go through `createServerFn` handlers (server-only); the API key never reaches the browser
-- API key stored in `user_settings` table, protected by RLS (user can only read/write their own row). Encryption at rest = Supabase default (DB-level)
+Change the validation in `src/routes/_authenticated/onboarding.tsx` (and matching logic in `src/routes/_authenticated/settings.tsx` if it shares the same schema):
+- Accept bare domains (e.g. `www.saraglove.com`, `saraglove.com/products/x`).
+- Auto-prepend `https://` if the user omits the protocol, then validate as URL.
+- Show a clearer inline error ("Enter a valid website, e.g. www.example.com").
+- Save the normalized `https://...` value to the database.
 
-## Auth
-- Enable Lovable Cloud
-- Email/password + Google OAuth (via `configure_social_auth`)
-- `/auth` route (sign in / sign up tabs)
-- Managed `_authenticated/` layout gates the app
-- New users → redirect to `/onboarding`; returning users → `/dashboard`
+## 2. New "How to find your API key" help page
 
-## Database (one migration)
-- `user_settings` (1:1 with auth.users)
-  - `user_id uuid PK refs auth.users on delete cascade`
-  - `openai_ads_api_key text` (nullable)
-  - `connected_account_name text`
-  - `store_url text`
-  - `onboarding_completed boolean default false`
-  - `conversion_checklist jsonb default '{}'` (step keys → bool)
-  - timestamps
-- `utm_links` (history for UTM Generator)
-  - `id, user_id, campaign_id, campaign_name, base_url, full_url, created_at`
-- RLS: each table — user can CRUD only `where user_id = auth.uid()`
-- GRANTs to `authenticated` + `service_role`
-- Trigger: auto-insert empty `user_settings` row on new auth user
+Add a dedicated route `src/routes/_authenticated/help.api-key.tsx` (URL: `/help/api-key`) that walks users through retrieving their key from the OpenAI Ads Manager:
 
-## Server functions (`src/lib/ads.functions.ts`)
-All use `requireSupabaseAuth`. Behavior is mock but signature-stable:
-- `verifyApiKey({ apiKey })` → validates format (non-empty, length check), stores it, returns `{ ok, accountName: "Acme Ads Account" }`
-- `getDashboardMetrics({ from, to })` → returns KPI totals, daily series, campaign rows (deterministic mock based on user id + date)
-- `listCampaigns()` → for UTM dropdown
-- `getSettings()` / `updateStoreUrl()` / `updateApiKey()` / `deleteAccount()`
-- `saveUtmLink()` / `listUtmLinks()`
-- `updateChecklist({ key, complete })`
+1. Go to **Ads Manager → Settings → General**
+2. Scroll to **API Keys**
+3. Click **+ Create New Key**, name it (e.g. "ROAS.ai"), copy the `sk-svc-...` value
+4. Paste it into ROAS.ai
 
-A single `src/lib/ads.provider.ts` exports the mock implementation behind an interface; swapping in a real API later is a one-file change.
+Include:
+- Numbered steps with the indigo/dark design system.
+- A reference screenshot illustration (use the uploaded settings screenshot as inspiration — recreate as a styled mock panel in JSX, not by embedding the user's screenshot).
+- A "Back to onboarding" / "Back to settings" button (uses `history.back()` or links to `/onboarding`).
+- Security callout: "Your key is encrypted and only used server-side."
 
-## Routes
-- `/` — marketing landing (brief hero, CTA to /auth)
-- `/auth` — sign in / sign up + Google button
-- `/onboarding` (under `_authenticated`) — 4-step wizard with progress bar
-  1. Connect API key (calls `verifyApiKey`, shows green check + account name)
-  2. Store URL input
-  3. Conversion checklist (5 items with checkboxes, persisted)
-  4. Done + confetti (`canvas-confetti`) → "Go to dashboard"
-  - Skips to dashboard if `onboarding_completed`
-- `/dashboard` — date range picker, 4 KPI cards, dual-axis line chart (Recharts), campaign table, yellow banner if revenue=0
-- `/utm` — campaign dropdown, URL/campaign inputs, generated URL box, copy button (sonner toast), history table
-- `/conversions` — same checklist as onboarding step 3, persistent + "test your pixel" instructions
-- `/settings` — masked API key + update modal, store URL update, delete account danger zone
+## 3. Link to the help page from existing screens
 
-## Layout & design
-- `AppShell` with dark sidebar (`#0f172a`), white content, indigo accent (`#6366f1`)
-- Tailwind tokens added to `src/styles.css`: `--primary` indigo, `--success` green, `--warning` amber, sidebar tokens
-- Inter font via Google Fonts link in `__root.tsx`
-- Mobile: sidebar collapses to off-canvas using shadcn Sidebar
-- shadcn components: Button, Input, Card, Table, Tabs, Dialog, Checkbox, Select, Calendar/Popover (date range), Sidebar, Sonner
+- Onboarding Step 1 (API key): add a "Need help finding your API key?" link → `/help/api-key` (opens in a new tab so progress isn't lost).
+- Settings page API key field: same link next to the input/label.
 
-## Packages to add
-- `recharts` (charts), `canvas-confetti`, `date-fns` (likely already present)
+## Technical notes
 
-## Security checklist
-- API key only read/written inside server fns (never returned to client except masked)
-- `getSettings` returns `apiKeyMasked: "••••a3f9"` instead of raw key
-- RLS on all tables; no anon grants
-- Google OAuth via Lovable broker
-- Input validation with Zod on every server fn
-
-## Build order
-1. Enable Cloud + Google auth
-2. Migration (tables, RLS, trigger, grants)
-3. Auth pages + managed `_authenticated` wiring
-4. Server functions + mock provider
-5. Onboarding wizard
-6. App shell + sidebar
-7. Dashboard, UTM, Conversions, Settings pages
-8. Landing page polish + SEO meta
-
-## Out of scope (call out to user)
-- Real OpenAI Ads API integration (no public API exists yet — mock used)
-- Actual pixel/conversion tracking script (guidance only, per spec)
+- Validation lives in the Zod schema inside the onboarding component. Update to:
+  ```ts
+  storeUrl: z.string().trim().min(1).transform((v) =>
+    /^https?:\/\//i.test(v) ? v : `https://${v}`
+  ).pipe(z.string().url())
+  ```
+- No database, server function, or auth changes required.
+- No new dependencies.
