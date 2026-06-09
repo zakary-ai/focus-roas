@@ -28,10 +28,10 @@ function AuthPage() {
       if (!data.user) return;
       const { data: settings } = await supabase
         .from("user_settings")
-        .select("openai_ads_api_key, openai_ads_account_id")
+        .select("openai_ads_api_key, openai_ad_account_id, onboarding_completed")
         .eq("user_id", data.user.id)
         .maybeSingle();
-      const onboarded = !!(settings?.openai_ads_api_key && settings?.openai_ads_account_id);
+      const onboarded = !!(settings?.onboarding_completed && settings?.openai_ads_api_key && settings?.openai_ad_account_id);
       navigate({ to: onboarded ? "/dashboard" : "/onboarding" });
     })();
   }, [navigate]);
