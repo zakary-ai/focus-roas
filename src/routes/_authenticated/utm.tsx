@@ -365,6 +365,14 @@ function CampaignBuilderPage() {
                       </Badge>
                     ))}
                   </div>
+                  {hints.length > 10 && (
+                    <p className="text-sm font-medium text-destructive">
+                      OpenAI Ads allows max 10 context hints. Remove {hints.length - 10} before creating.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {Math.min(hints.length, 10)}/10 hints added
+                  </p>
                   <form
                     className="flex gap-2"
                     onSubmit={(e) => {
@@ -427,7 +435,11 @@ function CampaignBuilderPage() {
                   <div className="mt-6 flex gap-3">
                     <Button variant="outline" onClick={saveDraft}>Save draft</Button>
                     <Button
-                      onClick={() =>
+                      onClick={() => {
+                        if (hints.length > 10) {
+                          toast.error(`OpenAI Ads allows max 10 context hints. Remove ${hints.length - 10} before creating.`);
+                          return;
+                        }
                         remote.mutate({
                           campaignName: result.campaignName,
                           dailyBudget: result.dailyBudget,
@@ -436,8 +448,8 @@ function CampaignBuilderPage() {
                           body: selectedBody,
                           destinationUrl: result.utmUrl,
                           contextHints: hints.length ? hints : result.contextHints,
-                        })
-                      }
+                        });
+                      }}
                       disabled={remote.isPending}
                     >
                       {remote.isPending ? "Creating..." : "Create Campaign via API"}
