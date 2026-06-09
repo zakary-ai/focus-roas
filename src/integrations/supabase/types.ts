@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_builds: {
+        Row: {
+          bodies: Json
+          campaign_name: string
+          context_hints: Json
+          created_at: string
+          headlines: Json
+          id: string
+          monthly_budget: number | null
+          product_description: string | null
+          product_name: string
+          product_url: string | null
+          remote_campaign_id: string | null
+          selected_body: string | null
+          selected_headline: string | null
+          target_audience: string | null
+          updated_at: string
+          user_id: string
+          utm_url: string
+        }
+        Insert: {
+          bodies?: Json
+          campaign_name: string
+          context_hints?: Json
+          created_at?: string
+          headlines?: Json
+          id?: string
+          monthly_budget?: number | null
+          product_description?: string | null
+          product_name: string
+          product_url?: string | null
+          remote_campaign_id?: string | null
+          selected_body?: string | null
+          selected_headline?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id: string
+          utm_url: string
+        }
+        Update: {
+          bodies?: Json
+          campaign_name?: string
+          context_hints?: Json
+          created_at?: string
+          headlines?: Json
+          id?: string
+          monthly_budget?: number | null
+          product_description?: string | null
+          product_name?: string
+          product_url?: string | null
+          remote_campaign_id?: string | null
+          selected_body?: string | null
+          selected_headline?: string | null
+          target_audience?: string | null
+          updated_at?: string
+          user_id?: string
+          utm_url?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           connected_account_name: string | null
