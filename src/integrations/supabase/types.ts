@@ -20,6 +20,7 @@ export type Database = {
           conversion_checklist: Json
           created_at: string
           onboarding_completed: boolean
+          openai_ad_account_id: string | null
           openai_ads_api_key: string | null
           store_url: string | null
           updated_at: string
@@ -30,6 +31,7 @@ export type Database = {
           conversion_checklist?: Json
           created_at?: string
           onboarding_completed?: boolean
+          openai_ad_account_id?: string | null
           openai_ads_api_key?: string | null
           store_url?: string | null
           updated_at?: string
@@ -40,6 +42,7 @@ export type Database = {
           conversion_checklist?: Json
           created_at?: string
           onboarding_completed?: boolean
+          openai_ad_account_id?: string | null
           openai_ads_api_key?: string | null
           store_url?: string | null
           updated_at?: string
