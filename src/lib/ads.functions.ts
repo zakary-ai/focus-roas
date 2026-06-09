@@ -522,6 +522,7 @@ const BuildInput = z.object({
   monthlyBudget: z.number().positive().max(1_000_000),
   targetAudience: z.string().trim().min(1).max(500),
   brand: z.string().trim().max(100).optional(),
+  campaignName: z.string().trim().min(1).max(200).optional(),
 });
 
 export const buildCampaign = createServerFn({ method: "POST" })
