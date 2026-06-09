@@ -23,9 +23,17 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard" });
-    });
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      const { data: settings } = await supabase
+        .from("user_settings")
+        .select("openai_ads_api_key, openai_ad_account_id, onboarding_completed")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+      const onboarded = !!(settings?.onboarding_completed && settings?.openai_ads_api_key && settings?.openai_ad_account_id);
+      navigate({ to: onboarded ? "/dashboard" : "/onboarding" });
+    })();
   }, [navigate]);
 
   async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
@@ -57,7 +65,7 @@ function AuthPage() {
   }
 
   async function handleGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/dashboard" });
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
     if (result.error) toast.error("Google sign-in failed");
   }
 
