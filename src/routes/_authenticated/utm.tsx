@@ -76,6 +76,7 @@ function CampaignBuilderPage() {
       productDescription: string;
       monthlyBudget: number;
       targetAudience: string;
+      campaignName?: string;
     }) => buildFn({ data: input }),
     onSuccess: (r) => {
       setResult(r);
