@@ -17,18 +17,11 @@ import {
   updateChecklist,
   completeOnboarding,
 } from "@/lib/ads.functions";
+import { CONVERSION_STEPS } from "@/lib/shopify-pixel-snippet";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
 });
-
-const CHECKLIST_ITEMS = [
-  { key: "open_manager", label: 'Go to OpenAI Ads Manager → Conversions' },
-  { key: "create_event", label: 'Create a new conversion event called "Purchase"' },
-  { key: "variable_value", label: 'Set conversion value to "Variable" (tracks actual order value)' },
-  { key: "add_pixel", label: "Copy the pixel snippet and add it to your order confirmation page" },
-  { key: "test", label: "Test a conversion to make sure it fires" },
-];
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -165,15 +158,23 @@ function Onboarding() {
         {step === 3 && (
           <div className="space-y-4">
             <h2 className="text-2xl font-semibold">Set up conversions</h2>
-            <p className="text-sm text-muted-foreground">Follow these steps inside OpenAI Ads Manager.</p>
+            <p className="text-sm text-muted-foreground">
+              Connect Shopify to OpenAI Ads Manager. Full code &amp; copy button live on the{" "}
+              <a href="/conversions" target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline">
+                Conversions page
+              </a>.
+            </p>
             <ul className="space-y-2">
-              {CHECKLIST_ITEMS.map((it, idx) => {
+              {CONVERSION_STEPS.map((it, idx) => {
                 const checked = !!settings?.conversionChecklist?.[it.key];
                 return (
                   <li key={it.key} className="flex items-start gap-3 rounded-lg border p-3">
-                    <Checkbox checked={checked} onCheckedChange={(v) => toggleCheck(it.key, !!v)} id={`c-${idx}`} />
-                    <Label htmlFor={`c-${idx}`} className="cursor-pointer text-sm leading-snug">
-                      <span className="font-medium text-foreground">{idx + 1}.</span> {it.label}
+                    <Checkbox checked={checked} onCheckedChange={(v) => toggleCheck(it.key, !!v)} id={`c-${idx}`} className="mt-1" />
+                    <Label htmlFor={`c-${idx}`} className="cursor-pointer space-y-0.5 text-sm leading-snug">
+                      <span className="block font-medium text-foreground">
+                        <span className="text-muted-foreground">{idx + 1}.</span> {it.title}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">{it.body}</span>
                     </Label>
                   </li>
                 );
