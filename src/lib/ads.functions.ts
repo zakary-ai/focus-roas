@@ -407,7 +407,6 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     const series: { date: string; spend: number; revenue: number; clicks: number }[] = [];
     for (let i = data.days - 1; i >= 0; i--) {
       const d = new Date(end);
-      d.setDate(end.getDate() - i);
       d.setUTCDate(end.getUTCDate() - i);
       const key = isoUtcDay(d);
       const row = byDate.get(key) ?? { spend: 0, revenue: 0, clicks: 0 };
