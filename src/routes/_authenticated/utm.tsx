@@ -97,7 +97,7 @@ function CampaignBuilderPage() {
         selectedBody: r.bodies[0] ?? "",
         headlines: r.headlines,
         bodies: r.bodies,
-        contextHints: r.contextHints,
+        contextHints: r.contextHints.slice(0, 10),
         utmUrl: r.utmUrl,
       });
     },
