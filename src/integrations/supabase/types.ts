@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_settings: {
+        Row: {
+          connected_account_name: string | null
+          conversion_checklist: Json
+          created_at: string
+          onboarding_completed: boolean
+          openai_ads_api_key: string | null
+          store_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_account_name?: string | null
+          conversion_checklist?: Json
+          created_at?: string
+          onboarding_completed?: boolean
+          openai_ads_api_key?: string | null
+          store_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_account_name?: string | null
+          conversion_checklist?: Json
+          created_at?: string
+          onboarding_completed?: boolean
+          openai_ads_api_key?: string | null
+          store_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      utm_links: {
+        Row: {
+          base_url: string
+          campaign_id: string | null
+          campaign_name: string
+          created_at: string
+          full_url: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          base_url: string
+          campaign_id?: string | null
+          campaign_name: string
+          created_at?: string
+          full_url: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          base_url?: string
+          campaign_id?: string | null
+          campaign_name?: string
+          created_at?: string
+          full_url?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
