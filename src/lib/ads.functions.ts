@@ -545,15 +545,18 @@ export const buildCampaign = createServerFn({ method: "POST" })
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
     const systemPrompt =
-      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. Headlines must be <=60 chars, body copy <=150 chars, hints are 1-3 word targeting keywords.";
+      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. Headlines must be <=60 chars. Body copy must be <=150 chars. Context hints are specific multi-word conversational phrases describing the kinds of ChatGPT conversations where this ad should appear — buyer intents, use-cases, buyer personas, product variants, and purchase contexts. Each hint is a short phrase (3-8 words), lowercased, no punctuation. Aim for 12-18 hints covering a wide range of intents: bulk/wholesale, specific use-cases (industry, profession, environment), product variants/specs, and price/quality angles.";
     const userPrompt = `Generate ad copy for this product.
 Product: ${data.productName}
 Description: ${data.productDescription}
 Target audience: ${data.targetAudience}
 Monthly budget: $${data.monthlyBudget}
 
+Example of high-performing context_hints for "blue nitrile gloves" (style reference only — generate hints specific to THIS product):
+["buying blue nitrile gloves in bulk","powder-free nitrile gloves","disposable gloves","industrial gloves","exam gloves","PPE supplies","bulk gloves by the case","latex-free gloves","nitrile gloves for shops","nitrile gloves for cleaning companies","gloves for janitorial teams","gloves for warehouses","gloves for auto shops","gloves for food handling","gloves for maintenance crews","gloves for medical offices","wholesale nitrile gloves","case-packed gloves","affordable disposable work gloves"]
+
 Return JSON with this exact shape:
-{"headlines":["...","...","..."],"bodies":["...","...","..."],"context_hints":["...","...","..."]}`;
+{"headlines":["...","...","..."],"bodies":["...","...","..."],"context_hints":["...", ... 12 to 18 phrases ...]}`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -589,11 +592,14 @@ Return JSON with this exact shape:
     }
     const headlines = (parsed.headlines ?? []).slice(0, 3).map((s) => String(s).slice(0, 60));
     const bodies = (parsed.bodies ?? []).slice(0, 3).map((s) => String(s).slice(0, 150));
-    const context_hints = (parsed.context_hints ?? []).slice(0, 3).map((s) => String(s).slice(0, 40));
+    const context_hints = (parsed.context_hints ?? [])
+      .slice(0, 20)
+      .map((s) => String(s).trim().toLowerCase().slice(0, 120))
+      .filter(Boolean);
 
     while (headlines.length < 3) headlines.push(`${data.productName} — shop now`);
     while (bodies.length < 3) bodies.push(`Discover ${data.productName}. Built for ${data.targetAudience}.`);
-    while (context_hints.length < 3) context_hints.push(data.targetAudience.split(/[,\s]+/)[0] ?? "buyers");
+    while (context_hints.length < 3) context_hints.push(data.targetAudience.split(/[,]+/)[0]?.trim().toLowerCase() ?? "buyers");
 
     const campaignName = `${brand} - ${data.productName} - v1`;
     const utmUrl = buildUtmUrl(data.productUrl, campaignName);

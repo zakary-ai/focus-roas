@@ -69,8 +69,13 @@ function CampaignBuilderPage() {
   });
 
   const build = useMutation({
-    mutationFn: (input: Parameters<typeof buildCampaign>[0]["data"]) =>
-      buildFn({ data: input }),
+    mutationFn: (input: {
+      productName: string;
+      productUrl: string;
+      productDescription: string;
+      monthlyBudget: number;
+      targetAudience: string;
+    }) => buildFn({ data: input }),
     onSuccess: (r) => {
       setResult(r);
       setSelectedHeadlineIdx(0);
@@ -84,16 +89,36 @@ function CampaignBuilderPage() {
   });
 
   const save = useMutation({
-    mutationFn: (input: Parameters<typeof saveCampaignBuild>[0]["data"]) =>
-      saveFn({ data: input }),
+    mutationFn: (input: {
+      productName: string;
+      productUrl: string;
+      productDescription?: string;
+      monthlyBudget: number;
+      targetAudience?: string;
+      campaignName: string;
+      selectedHeadline: string;
+      selectedBody: string;
+      headlines: string[];
+      bodies: string[];
+      contextHints: string[];
+      utmUrl: string;
+      remoteCampaignId?: string;
+    }) => saveFn({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-builds"] });
     },
   });
 
   const remote = useMutation({
-    mutationFn: (input: Parameters<typeof createCampaignViaApi>[0]["data"]) =>
-      createRemoteFn({ data: input }),
+    mutationFn: (input: {
+      campaignName: string;
+      dailyBudget: number;
+      lifetimeBudgetMicros: number;
+      headline: string;
+      body: string;
+      destinationUrl: string;
+      contextHints: string[];
+    }) => createRemoteFn({ data: input }),
     onSuccess: (r) => {
       setRemoteCampaignId(r.campaignId);
       toast.success("Campaign created!");
