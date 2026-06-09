@@ -51,7 +51,11 @@ function SettingsPage() {
     if (!/^adacct_[A-Za-z0-9]{6,}$/.test(acctId))
       return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
     try {
-      await verifyFn({ data: { apiKey: key || undefined, adAccountId: acctId } });
+      const result = await verifyFn({ data: { apiKey: key || undefined, adAccountId: acctId } });
+      if (!result.ok) {
+        toast.error(result.errorMessage);
+        return;
+      }
       setNewKey("");
       await refetch();
       toast.success("Settings updated");

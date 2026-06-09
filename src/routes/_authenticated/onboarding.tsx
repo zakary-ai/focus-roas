@@ -59,9 +59,13 @@ function Onboarding() {
       return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
     setBusy(true);
     try {
-      await verifyFn({
+      const result = await verifyFn({
         data: { apiKey: apiKey.trim(), adAccountId: adAccountId.trim() },
       });
+      if (!result.ok) {
+        toast.error(result.errorMessage);
+        return;
+      }
       await refetch();
       toast.success("Connected");
     } catch (e) {

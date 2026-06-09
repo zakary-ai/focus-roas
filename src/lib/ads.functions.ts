@@ -158,13 +158,13 @@ export const verifyApiKey = createServerFn({ method: "POST" })
       .maybeSingle();
     const apiKey = data.apiKey?.trim() || existing?.openai_ads_api_key || undefined;
     if (!apiKey) {
-      throw new Error("Enter your API key");
+      return { ok: false as const, errorMessage: "Enter your API key" };
     }
 
     try {
       await oaiAds<unknown>(apiKey, data.adAccountId, "/campaigns?limit=1");
     } catch (e) {
-      throw new Error(formatAdsConnectionError(e));
+      return { ok: false as const, errorMessage: formatAdsConnectionError(e) };
     }
 
     const accountName = data.adAccountId;
@@ -180,7 +180,7 @@ export const verifyApiKey = createServerFn({ method: "POST" })
         { onConflict: "user_id" },
       );
     if (error) throw new Error(error.message);
-    return { ok: true, accountName };
+    return { ok: true as const, accountName };
   });
 
 export const updateStoreUrl = createServerFn({ method: "POST" })
