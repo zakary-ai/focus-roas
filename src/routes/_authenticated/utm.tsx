@@ -77,6 +77,9 @@ function UtmGenerator() {
         <CardContent className="space-y-4">
           <div>
             <Label>Campaign</Label>
+            {campaignsRes?.errorMessage && (
+              <p className="mb-2 text-sm text-destructive">{campaignsRes.errorMessage}</p>
+            )}
             <Select
               value={campaignId}
               onValueChange={(v) => {

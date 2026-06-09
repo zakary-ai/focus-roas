@@ -60,7 +60,10 @@ function Dashboard() {
 
       {data && !data.connected && (
         <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
-          Connect your OpenAI Ads account from <a className="text-primary underline" href="/onboarding">onboarding</a> to see metrics.
+          <p>
+            {data.errorMessage ?? "Connect your OpenAI Ads account from onboarding to see metrics."}
+          </p>
+          <a className="mt-3 inline-block text-primary underline" href="/settings">Open settings</a>
         </div>
       )}
 
