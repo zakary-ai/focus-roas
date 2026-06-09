@@ -2,30 +2,47 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-// Deterministic mock data — based on userId+date so each user sees stable numbers.
-function hashString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+// ---------- OpenAI Ads API ----------
+const OPENAI_ADS_BASE = "https://api.ads.openai.com/v1";
+const AD_ACCOUNT_RE = /^adacct_[A-Za-z0-9]{6,}$/;
+
+async function oaiAds<T>(
+  apiKey: string,
+  accountId: string,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const res = await fetch(`${OPENAI_ADS_BASE}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "openai-ad-account": accountId,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(
+      `OpenAI Ads API ${res.status}: ${body.slice(0, 300) || res.statusText}`,
+    );
   }
-  return Math.abs(h);
-}
-function rng(seed: number) {
-  let s = seed || 1;
-  return () => {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
+  return (await res.json()) as T;
 }
 
-const MOCK_CAMPAIGNS = [
-  { id: "camp_001", name: "Spring Sale - Search" },
-  { id: "camp_002", name: "Brand Awareness - Display" },
-  { id: "camp_003", name: "Retargeting - Cart Abandoners" },
-  { id: "camp_004", name: "New Product Launch" },
-  { id: "camp_005", name: "Holiday Promo" },
-];
+async function getCreds(supabase: any, userId: string) {
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("openai_ads_api_key, openai_ad_account_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.openai_ads_api_key || !data?.openai_ad_account_id) return null;
+  return {
+    apiKey: data.openai_ads_api_key as string,
+    accountId: data.openai_ad_account_id as string,
+  };
+}
 
 function mask(key: string | null | undefined): string | null {
   if (!key) return null;
@@ -40,20 +57,24 @@ export const getSettings = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("user_settings")
-      .select("openai_ads_api_key, connected_account_name, store_url, onboarding_completed, conversion_checklist")
+      .select(
+        "openai_ads_api_key, openai_ad_account_id, connected_account_name, store_url, onboarding_completed, conversion_checklist",
+      )
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     const row = data ?? {
       openai_ads_api_key: null,
+      openai_ad_account_id: null,
       connected_account_name: null,
       store_url: null,
       onboarding_completed: false,
       conversion_checklist: {},
     };
     return {
-      apiKeyConnected: !!row.openai_ads_api_key,
+      apiKeyConnected: !!row.openai_ads_api_key && !!row.openai_ad_account_id,
       apiKeyMasked: mask(row.openai_ads_api_key as string | null),
+      adAccountId: (row.openai_ad_account_id as string | null) ?? null,
       accountName: row.connected_account_name,
       storeUrl: row.store_url,
       onboardingCompleted: row.onboarding_completed,
@@ -63,19 +84,37 @@ export const getSettings = createServerFn({ method: "GET" })
 
 export const verifyApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { apiKey: string }) =>
-    z.object({ apiKey: z.string().trim().min(8, "Key looks too short").max(200) }).parse(d),
+  .inputValidator((d: { apiKey: string; adAccountId: string }) =>
+    z
+      .object({
+        apiKey: z.string().trim().min(8, "Key looks too short").max(200),
+        adAccountId: z
+          .string()
+          .trim()
+          .regex(AD_ACCOUNT_RE, "Ad account ID must look like adacct_xxxxxxxxx"),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
-    // Mock validation: any 8+ char key is "valid". A real provider would call the OpenAI Ads API here.
-    const accountName = `Acme Ads · ${data.apiKey.slice(-4).toUpperCase()}`;
+    // Verify by hitting the real API.
+    try {
+      await oaiAds<unknown>(data.apiKey, data.adAccountId, "/campaigns?limit=1");
+    } catch (e) {
+      throw new Error(
+        e instanceof Error
+          ? `Could not connect to OpenAI Ads — ${e.message}`
+          : "Could not connect to OpenAI Ads",
+      );
+    }
+    const accountName = data.adAccountId;
     const { error } = await supabase
       .from("user_settings")
       .upsert(
         {
           user_id: userId,
           openai_ads_api_key: data.apiKey,
+          openai_ad_account_id: data.adAccountId,
           connected_account_name: accountName,
         },
         { onConflict: "user_id" },
@@ -149,18 +188,33 @@ export const deleteAccountData = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ---------- Ads provider (mock) ----------
+// ---------- Ads provider (OpenAI Ads API) ----------
+type ApiCampaign = {
+  id: string;
+  name: string;
+  insight_metrics?: {
+    spend?: number;
+    clicks?: number;
+    impressions?: number;
+    revenue?: number;
+    conversions?: number;
+  };
+};
+
 export const listCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data } = await supabase
-      .from("user_settings")
-      .select("openai_ads_api_key")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!data?.openai_ads_api_key) return { connected: false as const, campaigns: [] };
-    return { connected: true as const, campaigns: MOCK_CAMPAIGNS };
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) return { connected: false as const, campaigns: [] };
+    const res = await oaiAds<{ data: ApiCampaign[] }>(
+      creds.apiKey,
+      creds.accountId,
+      "/campaigns?include_insight_metrics=true",
+    );
+    return {
+      connected: true as const,
+      campaigns: (res.data ?? []).map((c) => ({ id: c.id, name: c.name })),
+    };
   });
 
 export const getDashboardMetrics = createServerFn({ method: "POST" })
@@ -170,39 +224,83 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    const creds = await getCreds(supabase, userId);
+    if (!creds) return { connected: false as const };
+
     const { data: settings } = await supabase
       .from("user_settings")
-      .select("openai_ads_api_key, conversion_checklist")
+      .select("conversion_checklist")
       .eq("user_id", userId)
       .maybeSingle();
-    if (!settings?.openai_ads_api_key) {
-      return { connected: false as const };
-    }
-    const checklist = (settings.conversion_checklist as Record<string, boolean>) ?? {};
+    const checklist = (settings?.conversion_checklist as Record<string, boolean>) ?? {};
     const conversionsConfigured = Object.values(checklist).filter(Boolean).length >= 3;
 
-    const seedBase = hashString(userId);
-    const series: { date: string; spend: number; revenue: number; clicks: number }[] = [];
-    let totalSpend = 0, totalRevenue = 0, totalClicks = 0;
-    for (let i = data.days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const r = rng(seedBase + hashString(dateStr));
-      const spend = Math.round((80 + r() * 220) * 100) / 100;
-      const clicks = Math.floor(40 + r() * 180);
-      const revenue = conversionsConfigured ? Math.round(spend * (1.5 + r() * 2.5) * 100) / 100 : 0;
-      series.push({ date: dateStr, spend, revenue, clicks });
-      totalSpend += spend;
-      totalRevenue += revenue;
-      totalClicks += clicks;
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (data.days - 1));
+    const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+
+    // Daily series via /insights
+    type InsightRow = {
+      date?: string;
+      campaign_id?: string;
+      spend?: number;
+      revenue?: number;
+      clicks?: number;
+      impressions?: number;
+    };
+    const dailyRes = await oaiAds<{ data: InsightRow[] }>(
+      creds.apiKey,
+      creds.accountId,
+      "/insights",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          start_date: isoDay(start),
+          end_date: isoDay(end),
+          metrics: ["spend", "revenue", "clicks", "impressions"],
+          breakdown: ["date"],
+        }),
+      },
+    );
+    const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
+    for (const r of dailyRes.data ?? []) {
+      if (!r.date) continue;
+      const cur = byDate.get(r.date) ?? { spend: 0, revenue: 0, clicks: 0 };
+      cur.spend += Number(r.spend ?? 0);
+      cur.revenue += Number(r.revenue ?? 0);
+      cur.clicks += Number(r.clicks ?? 0);
+      byDate.set(r.date, cur);
     }
-    const campaigns = MOCK_CAMPAIGNS.map((c, idx) => {
-      const r = rng(seedBase + hashString(c.id));
-      const spend = Math.round((totalSpend / MOCK_CAMPAIGNS.length) * (0.6 + r() * 0.8) * 100) / 100;
-      const clicks = Math.floor((totalClicks / MOCK_CAMPAIGNS.length) * (0.5 + r() * 0.9));
-      const impressions = clicks * Math.floor(30 + r() * 50);
-      const revenue = conversionsConfigured ? Math.round(spend * (1.2 + r() * 3) * 100) / 100 : 0;
+    const series: { date: string; spend: number; revenue: number; clicks: number }[] = [];
+    for (let i = data.days - 1; i >= 0; i--) {
+      const d = new Date(end);
+      d.setDate(end.getDate() - i);
+      const key = isoDay(d);
+      const row = byDate.get(key) ?? { spend: 0, revenue: 0, clicks: 0 };
+      series.push({ date: key, ...row });
+    }
+    const totals = series.reduce(
+      (a, s) => ({
+        spend: a.spend + s.spend,
+        revenue: a.revenue + s.revenue,
+        clicks: a.clicks + s.clicks,
+      }),
+      { spend: 0, revenue: 0, clicks: 0 },
+    );
+
+    // Per-campaign table via /campaigns?include_insight_metrics=true
+    const campRes = await oaiAds<{ data: ApiCampaign[] }>(
+      creds.apiKey,
+      creds.accountId,
+      "/campaigns?include_insight_metrics=true",
+    );
+    const campaigns = (campRes.data ?? []).map((c) => {
+      const m = c.insight_metrics ?? {};
+      const spend = Number(m.spend ?? 0);
+      const clicks = Number(m.clicks ?? 0);
+      const impressions = Number(m.impressions ?? 0);
+      const revenue = Number(m.revenue ?? 0);
       return {
         id: c.id,
         name: c.name,
@@ -214,18 +312,39 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
         roas: spend ? revenue / spend : 0,
       };
     });
+
     return {
       connected: true as const,
       conversionsConfigured,
       totals: {
-        spend: Math.round(totalSpend * 100) / 100,
-        revenue: Math.round(totalRevenue * 100) / 100,
-        clicks: totalClicks,
-        roas: totalSpend ? totalRevenue / totalSpend : 0,
+        spend: Math.round(totals.spend * 100) / 100,
+        revenue: Math.round(totals.revenue * 100) / 100,
+        clicks: totals.clicks,
+        roas: totals.spend ? totals.revenue / totals.spend : 0,
       },
-      series,
+      series: series.map((s) => ({
+        date: s.date,
+        spend: Math.round(s.spend * 100) / 100,
+        revenue: Math.round(s.revenue * 100) / 100,
+        clicks: s.clicks,
+      })),
       campaigns,
     };
+  });
+
+export const getCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) =>
+    z.object({ id: z.string().trim().min(1).max(128) }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) throw new Error("OpenAI Ads is not connected");
+    return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
+      creds.apiKey,
+      creds.accountId,
+      `/campaigns/${encodeURIComponent(data.id)}`,
+    );
   });
 
 // ---------- UTM ----------
