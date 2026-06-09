@@ -683,7 +683,6 @@ export const listCampaignBuilds = createServerFn({ method: "GET" })
 
 const CreateRemoteInput = z.object({
   campaignName: z.string().min(1).max(200),
-  dailyBudget: z.number().positive(),
   lifetimeBudgetMicros: z.number().int().positive(),
   headline: z.string().min(1).max(200),
   body: z.string().min(1).max(500),
@@ -705,7 +704,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           name: data.campaignName,
           objective: "OUTCOME_TRAFFIC",
           status: "PAUSED",
-          lifetime_budget: data.lifetimeBudgetMicros,
+          budget: data.lifetimeBudgetMicros,
         }),
       });
 
