@@ -36,29 +36,24 @@ function SettingsPage() {
 
   const { data: settings, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
   const [newKey, setNewKey] = useState("");
-  const [newAcct, setNewAcct] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
 
   useEffect(() => {
     if (settings?.storeUrl) setStoreUrl(settings.storeUrl);
-    if (settings?.adAccountId) setNewAcct(settings.adAccountId);
   }, [settings]);
 
   async function updateKey() {
     const key = newKey.trim();
-    const acctId = newAcct.trim();
-    if (!acctId) return toast.error("Ad account ID is required");
-    if (!/^adacct_[A-Za-z0-9]{6,}$/.test(acctId))
-      return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
+    if (!key) return toast.error("Enter an API key");
     try {
-      const result = await verifyFn({ data: { apiKey: key || undefined, adAccountId: acctId } });
+      const result = await verifyFn({ data: { apiKey: key } });
       if (!result.ok) {
         toast.error(result.errorMessage);
         return;
       }
       setNewKey("");
       await refetch();
-      toast.success("Settings updated");
+      toast.success(`Connected to ${result.accountName}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update");
     }
@@ -85,6 +80,12 @@ function SettingsPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">OpenAI Ads API key</CardTitle></CardHeader>
           <CardContent className="space-y-3">
+            {settings?.accountName && (
+              <div>
+                <Label>Connected account</Label>
+                <Input readOnly value={settings.accountName} />
+              </div>
+            )}
             <div>
               <Label>Current key</Label>
               <Input readOnly value={settings?.apiKeyMasked ?? "Not connected"} className="font-mono" />
@@ -99,21 +100,7 @@ function SettingsPage() {
               <div className="flex gap-2">
                 <Input id="newkey" type="password" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="sk-ads-..." />
               </div>
-              <div className="mt-2">
-                <Label htmlFor="newacct">Ad Account ID</Label>
-                <Input
-                  id="newacct"
-                  value={newAcct}
-                  onChange={(e) => setNewAcct(e.target.value)}
-                  placeholder="adacct_xxxxxxxxx"
-                  className="font-mono"
-                />
-              </div>
-              <Button
-                className="mt-3"
-                onClick={updateKey}
-                disabled={!newKey.trim() && newAcct.trim() === (settings?.adAccountId ?? "")}
-              >
+              <Button className="mt-3" onClick={updateKey} disabled={!newKey.trim()}>
                 Update
               </Button>
             </div>
