@@ -45,11 +45,14 @@ function SettingsPage() {
   }, [settings]);
 
   async function updateKey() {
-    if (!newKey.trim()) return toast.error("Enter the new API key");
-    if (!/^adacct_[A-Za-z0-9]{6,}$/.test(newAcct.trim()))
+    const key = newKey.trim();
+    if (!key) return toast.error("Enter the new API key");
+    const acctId = (settings?.adAccountId || newAcct.trim());
+    if (!acctId) return toast.error("Ad account ID is required");
+    if (!/^adacct_[A-Za-z0-9]{6,}$/.test(acctId))
       return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
     try {
-      await verifyFn({ data: { apiKey: newKey.trim(), adAccountId: newAcct.trim() } });
+      await verifyFn({ data: { apiKey: key, adAccountId: acctId } });
       setNewKey("");
       await refetch();
       toast.success("API key updated");
