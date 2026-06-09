@@ -95,8 +95,8 @@ function Dashboard() {
                     <YAxis yAxisId="right" orientation="right" fontSize={12} />
                     <Tooltip />
                     <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="spend" stroke="hsl(var(--chart-1))" name="Spend" strokeWidth={2} dot={false} />
-                    <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="hsl(var(--chart-2))" name="Revenue" strokeWidth={2} dot={false} />
+                    <Line yAxisId="left" type="monotone" dataKey="spend" stroke="var(--chart-1)" name="Spend" strokeWidth={2} dot={false} />
+                    <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="var(--chart-2)" name="Revenue" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
