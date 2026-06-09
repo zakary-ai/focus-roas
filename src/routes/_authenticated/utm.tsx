@@ -89,8 +89,21 @@ function CampaignBuilderPage() {
   });
 
   const save = useMutation({
-    mutationFn: (input: Parameters<typeof saveFn>[0] extends { data: infer D } ? D : never) =>
-      saveFn({ data: input } as Parameters<typeof saveFn>[0]),
+    mutationFn: (input: {
+      productName: string;
+      productUrl: string;
+      productDescription?: string;
+      monthlyBudget: number;
+      targetAudience?: string;
+      campaignName: string;
+      selectedHeadline: string;
+      selectedBody: string;
+      headlines: string[];
+      bodies: string[];
+      contextHints: string[];
+      utmUrl: string;
+      remoteCampaignId?: string;
+    }) => saveFn({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["campaign-builds"] });
     },
