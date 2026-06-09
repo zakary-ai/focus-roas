@@ -4,7 +4,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 // ---------- OpenAI Ads API ----------
 const OPENAI_ADS_BASE = "https://api.ads.openai.com/v1";
-const AD_ACCOUNT_RE = /^adacct_[A-Za-z0-9]{6,}$/;
 
 class OpenAIAdsApiError extends Error {
   status: number;
@@ -35,11 +34,8 @@ function formatAdsConnectionError(error: unknown): string {
       return "The API key was rejected. Check that you pasted the correct OpenAI Ads API key.";
     }
 
-    if (
-      error.status === 403 &&
-      /does not have access to the ad account/i.test(error.apiMessage ?? error.bodyText)
-    ) {
-      return "This API key does not have access to that ad account. Check the ad account ID and make sure this key belongs to a user who can access it.";
+    if (error.status === 403) {
+      return "This API key does not have access to an ad account.";
     }
 
     if (error.status === 404) {
@@ -60,7 +56,6 @@ function isRecoverableAdsAuthError(error: unknown): error is OpenAIAdsApiError {
 
 async function oaiAds<T>(
   apiKey: string,
-  accountId: string,
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
@@ -68,7 +63,6 @@ async function oaiAds<T>(
     ...init,
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "openai-ad-account": accountId,
       "Content-Type": "application/json",
       ...(init.headers ?? {}),
     },
@@ -87,15 +81,12 @@ async function oaiAds<T>(
 async function getCreds(supabase: any, userId: string) {
   const { data, error } = await supabase
     .from("user_settings")
-    .select("openai_ads_api_key, openai_ad_account_id")
+    .select("openai_ads_api_key")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data?.openai_ads_api_key || !data?.openai_ad_account_id) return null;
-  return {
-    apiKey: data.openai_ads_api_key as string,
-    accountId: data.openai_ad_account_id as string,
-  };
+  if (!data?.openai_ads_api_key) return null;
+  return { apiKey: data.openai_ads_api_key as string };
 }
 
 function mask(key: string | null | undefined): string | null {
@@ -126,7 +117,7 @@ export const getSettings = createServerFn({ method: "GET" })
       conversion_checklist: {},
     };
     return {
-      apiKeyConnected: !!row.openai_ads_api_key && !!row.openai_ad_account_id,
+      apiKeyConnected: !!row.openai_ads_api_key,
       apiKeyMasked: mask(row.openai_ads_api_key as string | null),
       adAccountId: (row.openai_ad_account_id as string | null) ?? null,
       accountName: row.connected_account_name,
@@ -138,43 +129,32 @@ export const getSettings = createServerFn({ method: "GET" })
 
 export const verifyApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { apiKey?: string; adAccountId: string }) =>
+  .inputValidator((d: { apiKey: string }) =>
     z
       .object({
-        apiKey: z.string().trim().min(8, "Key looks too short").max(200).optional(),
-        adAccountId: z
-          .string()
-          .trim()
-          .regex(AD_ACCOUNT_RE, "Ad account ID must look like adacct_xxxxxxxxx"),
+        apiKey: z.string().trim().min(8, "Key looks too short").max(200),
       })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
-    const { data: existing } = await supabase
-      .from("user_settings")
-      .select("openai_ads_api_key")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const apiKey = data.apiKey?.trim() || existing?.openai_ads_api_key || undefined;
-    if (!apiKey) {
-      return { ok: false as const, errorMessage: "Enter your API key" };
-    }
+    const apiKey = data.apiKey.trim();
 
+    let account: { id: string; name?: string };
     try {
-      await oaiAds<unknown>(apiKey, data.adAccountId, "/campaigns?limit=1");
+      account = await oaiAds<{ id: string; name?: string }>(apiKey, "/ad_account");
     } catch (e) {
       return { ok: false as const, errorMessage: formatAdsConnectionError(e) };
     }
 
-    const accountName = data.adAccountId;
+    const accountName = account.name ?? account.id;
     const { error } = await supabase
       .from("user_settings")
       .upsert(
         {
           user_id: userId,
           openai_ads_api_key: apiKey,
-          openai_ad_account_id: data.adAccountId,
+          openai_ad_account_id: account.id,
           connected_account_name: accountName,
         },
         { onConflict: "user_id" },
@@ -269,7 +249,6 @@ export const listCampaigns = createServerFn({ method: "GET" })
     try {
       const res = await oaiAds<{ data: ApiCampaign[] }>(
         creds.apiKey,
-        creds.accountId,
         "/campaigns?include_insight_metrics=true",
       );
       return {
@@ -324,7 +303,6 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     try {
       dailyRes = await oaiAds<{ data: InsightRow[] }>(
         creds.apiKey,
-        creds.accountId,
         "/insights",
         {
           method: "POST",
@@ -376,7 +354,6 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     try {
       campRes = await oaiAds<{ data: ApiCampaign[] }>(
         creds.apiKey,
-        creds.accountId,
         "/campaigns?include_insight_metrics=true",
       );
     } catch (error) {
@@ -436,7 +413,6 @@ export const getCampaign = createServerFn({ method: "POST" })
     try {
       return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
         creds.apiKey,
-        creds.accountId,
         `/campaigns/${encodeURIComponent(data.id)}`,
       );
     } catch (error) {
