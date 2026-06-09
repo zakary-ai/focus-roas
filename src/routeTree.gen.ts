@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUtmRouteImport } from './routes/_authenticated/utm'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConversionsRouteImport } from './routes/_authenticated/conversions'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedUtmRoute = AuthenticatedUtmRouteImport.update({
   id: '/utm',
   path: '/utm',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/conversions': typeof AuthenticatedConversionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/utm': typeof AuthenticatedUtmRoute
 }
 export interface FileRoutesByTo {
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/conversions': typeof AuthenticatedConversionsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/utm': typeof AuthenticatedUtmRoute
 }
 export interface FileRoutesById {
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/conversions': typeof AuthenticatedConversionsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/utm': typeof AuthenticatedUtmRoute
 }
 export interface FileRouteTypes {
@@ -87,9 +96,17 @@ export interface FileRouteTypes {
     | '/conversions'
     | '/dashboard'
     | '/onboarding'
+    | '/settings'
     | '/utm'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/conversions' | '/dashboard' | '/onboarding' | '/utm'
+  to:
+    | '/'
+    | '/auth'
+    | '/conversions'
+    | '/dashboard'
+    | '/onboarding'
+    | '/settings'
+    | '/utm'
   id:
     | '__root__'
     | '/'
@@ -98,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/conversions'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
+    | '/_authenticated/settings'
     | '/_authenticated/utm'
   fileRoutesById: FileRoutesById
 }
@@ -137,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUtmRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/onboarding': {
       id: '/_authenticated/onboarding'
       path: '/onboarding'
@@ -165,6 +190,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConversionsRoute: typeof AuthenticatedConversionsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUtmRoute: typeof AuthenticatedUtmRoute
 }
 
@@ -172,6 +198,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConversionsRoute: AuthenticatedConversionsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUtmRoute: AuthenticatedUtmRoute,
 }
 
