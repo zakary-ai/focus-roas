@@ -87,7 +87,17 @@ export const verifyApiKey = createServerFn({ method: "POST" })
 export const updateStoreUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { storeUrl: string }) =>
-    z.object({ storeUrl: z.string().trim().url().max(500) }).parse(d),
+    z
+      .object({
+        storeUrl: z
+          .string()
+          .trim()
+          .min(1)
+          .max(500)
+          .transform((v) => (/^https?:\/\//i.test(v) ? v : `https://${v}`))
+          .pipe(z.string().url().max(500)),
+      })
+      .parse(d),
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;

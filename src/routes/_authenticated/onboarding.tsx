@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -74,12 +74,22 @@ function Onboarding() {
   }
 
   async function step2Submit() {
+    const raw = storeUrl.trim();
+    if (!raw) return toast.error("Enter your store URL");
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      // quick client-side sanity check
+      new URL(normalized);
+    } catch {
+      return toast.error("Enter a valid website, e.g. www.example.com");
+    }
+    setStoreUrl(normalized);
     setBusy(true);
     try {
-      await storeUrlFn({ data: { storeUrl: storeUrl.trim() } });
+      await storeUrlFn({ data: { storeUrl: normalized } });
       setStep(3);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Invalid URL");
+      toast.error("Enter a valid website, e.g. www.example.com");
     } finally {
       setBusy(false);
     }
@@ -113,6 +123,13 @@ function Onboarding() {
             <div>
               <Label htmlFor="key">API Key</Label>
               <Input id="key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-ads-..." />
+              <Link
+                to="/help/api-key"
+                target="_blank"
+                className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Need help finding your API key?
+              </Link>
             </div>
             {settings?.apiKeyConnected && (
               <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
@@ -135,7 +152,8 @@ function Onboarding() {
             <p className="text-sm text-muted-foreground">We'll pre-fill this when generating UTM tags.</p>
             <div>
               <Label htmlFor="url">Store or product URL</Label>
-              <Input id="url" value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="https://mystore.com" />
+              <Input id="url" value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} placeholder="www.mystore.com" />
+              <p className="mt-1 text-xs text-muted-foreground">You can paste a domain like <code>www.mystore.com</code> — we'll add <code>https://</code> for you.</p>
             </div>
             <div className="flex justify-between">
               <Button variant="ghost" onClick={() => setStep(1)}>Back</Button>

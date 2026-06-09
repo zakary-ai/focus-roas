@@ -17,6 +17,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConversionsRouteImport } from './routes/_authenticated/conversions'
+import { Route as AuthenticatedHelpApiKeyRouteImport } from './routes/_authenticated/help.api-key'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -58,6 +59,11 @@ const AuthenticatedConversionsRoute =
     path: '/conversions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHelpApiKeyRoute = AuthenticatedHelpApiKeyRouteImport.update({
+  id: '/help/api-key',
+  path: '/help/api-key',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/utm': typeof AuthenticatedUtmRoute
+  '/help/api-key': typeof AuthenticatedHelpApiKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/utm': typeof AuthenticatedUtmRoute
+  '/help/api-key': typeof AuthenticatedHelpApiKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/utm': typeof AuthenticatedUtmRoute
+  '/_authenticated/help/api-key': typeof AuthenticatedHelpApiKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/settings'
     | '/utm'
+    | '/help/api-key'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/settings'
     | '/utm'
+    | '/help/api-key'
   id:
     | '__root__'
     | '/'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/settings'
     | '/_authenticated/utm'
+    | '/_authenticated/help/api-key'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConversionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/help/api-key': {
+      id: '/_authenticated/help/api-key'
+      path: '/help/api-key'
+      fullPath: '/help/api-key'
+      preLoaderRoute: typeof AuthenticatedHelpApiKeyRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -192,6 +211,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUtmRoute: typeof AuthenticatedUtmRoute
+  AuthenticatedHelpApiKeyRoute: typeof AuthenticatedHelpApiKeyRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -200,6 +220,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUtmRoute: AuthenticatedUtmRoute,
+  AuthenticatedHelpApiKeyRoute: AuthenticatedHelpApiKeyRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -214,13 +235,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
