@@ -78,6 +78,15 @@ async function oaiAds<T>(
   return (await res.json()) as T;
 }
 
+function utcDayFromToday(daysAgo: number) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo));
+}
+
+function isoUtcDay(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
 async function getCreds(supabase: any, userId: string) {
   const { data, error } = await supabase
     .from("user_settings")
@@ -282,12 +291,6 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     const checklist = (settings?.conversion_checklist as Record<string, boolean>) ?? {};
     const conversionsConfigured = Object.values(checklist).filter(Boolean).length >= 3;
 
-    const now = new Date();
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
-    const start = new Date(end);
-    start.setUTCDate(end.getUTCDate() - (data.days - 1));
-    const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-
     type InsightRow = {
       readable_time?: string;
       campaign_id?: string;
@@ -299,12 +302,7 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       cpc?: number | string;
     };
 
-    const since = isoDay(start);
-    const until = isoDay(end);
-    const params = new URLSearchParams();
-    params.append("time_granularity", "daily");
-    params.append("aggregation_level", "campaign");
-    for (const f of [
+    const insightFields = [
       "readable_time",
       "campaign_id",
       "campaign_name",
@@ -313,26 +311,59 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       "spend",
       "ctr",
       "cpc",
-    ]) {
-      params.append("fields[]", f);
-    }
-    params.append(
-      "time_ranges[]",
-      JSON.stringify({ type: "date_range", since, until }),
-    );
-    params.append("limit", "1000");
+    ];
 
-    let insightsRes: { data: InsightRow[] };
-    try {
-      insightsRes = await oaiAds<{ data: InsightRow[] }>(
-        creds.apiKey,
-        `/ad_account/insights?${params.toString()}`,
-      );
-    } catch (error) {
-      if (isRecoverableAdsAuthError(error)) {
-        return { connected: false as const, errorMessage: formatAdsConnectionError(error) };
+    let insightsRes: { data: InsightRow[] } | null = null;
+    let end: Date | null = null;
+
+    for (let endOffsetDays = 1; endOffsetDays <= 7; endOffsetDays++) {
+      const candidateEnd = utcDayFromToday(endOffsetDays);
+      const candidateStart = new Date(candidateEnd);
+      candidateStart.setUTCDate(candidateEnd.getUTCDate() - (data.days - 1));
+
+      const params = new URLSearchParams();
+      params.append("time_granularity", "daily");
+      params.append("aggregation_level", "campaign");
+      for (const field of insightFields) {
+        params.append("fields[]", field);
       }
-      throw error;
+      params.append(
+        "time_ranges[]",
+        JSON.stringify({
+          type: "date_range",
+          since: isoUtcDay(candidateStart),
+          until: isoUtcDay(candidateEnd),
+        }),
+      );
+      params.append("limit", "1000");
+
+      try {
+        insightsRes = await oaiAds<{ data: InsightRow[] }>(
+          creds.apiKey,
+          `/ad_account/insights?${params.toString()}`,
+        );
+        end = candidateEnd;
+        break;
+      } catch (error) {
+        if (isRecoverableAdsAuthError(error)) {
+          return { connected: false as const, errorMessage: formatAdsConnectionError(error) };
+        }
+
+        const isFutureRangeError =
+          error instanceof OpenAIAdsApiError &&
+          error.status === 400 &&
+          (error.apiMessage ?? error.bodyText).includes("time_ranges.end cannot be in the future");
+
+        if (isFutureRangeError && endOffsetDays < 7) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    if (!insightsRes || !end) {
+      throw new Error("Could not fetch dashboard insights right now.");
     }
 
     const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
@@ -377,7 +408,8 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     for (let i = data.days - 1; i >= 0; i--) {
       const d = new Date(end);
       d.setDate(end.getDate() - i);
-      const key = isoDay(d);
+      d.setUTCDate(end.getUTCDate() - i);
+      const key = isoUtcDay(d);
       const row = byDate.get(key) ?? { spend: 0, revenue: 0, clicks: 0 };
       series.push({ date: key, ...row });
     }
