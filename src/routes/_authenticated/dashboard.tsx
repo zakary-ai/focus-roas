@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { AlertTriangle } from "lucide-react";
 import { getDashboardMetrics, getSettings } from "@/lib/ads.functions";
+import { CampaignDetailSheet } from "@/components/campaign-detail-sheet";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -21,6 +22,7 @@ function Dashboard() {
   const metricsFn = useServerFn(getDashboardMetrics);
   const settingsFn = useServerFn(getSettings);
   const [days, setDays] = useState(30);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
   const { data, isLoading } = useQuery({
@@ -120,7 +122,11 @@ function Dashboard() {
                 </TableHeader>
                 <TableBody>
                   {data.campaigns.map((c) => (
-                    <TableRow key={c.id}>
+                    <TableRow
+                      key={c.id}
+                      onClick={() => setSelectedCampaignId(c.id)}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="text-right">{fmt(c.spend)}</TableCell>
                       <TableCell className="text-right">{c.clicks.toLocaleString()}</TableCell>
@@ -137,6 +143,11 @@ function Dashboard() {
         </>
       )}
       {isLoading && <div className="mt-6 text-sm text-muted-foreground">Loading metrics…</div>}
+      <CampaignDetailSheet
+        campaignId={selectedCampaignId}
+        days={days}
+        onClose={() => setSelectedCampaignId(null)}
+      />
     </AppShell>
   );
 }

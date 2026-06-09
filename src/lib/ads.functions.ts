@@ -458,6 +458,218 @@ export const getCampaign = createServerFn({ method: "POST" })
     }
   });
 
+export const getCampaignDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; days: number }) =>
+    z
+      .object({
+        id: z.string().trim().min(1).max(128),
+        days: z.number().int().min(1).max(365),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) throw new Error("OpenAI Ads is not connected");
+
+    type CampaignRaw = {
+      id: string;
+      name: string;
+      status?: string;
+      start_date?: string;
+      created_at?: string;
+      budget?: {
+        daily_spend_limit_micros?: number | string;
+        lifetime_spend_limit_micros?: number | string;
+      };
+    };
+    type InsightRow = {
+      readable_time?: string;
+      spend?: number | string;
+      clicks?: number | string;
+      impressions?: number | string;
+    };
+    type AdGroupRaw = {
+      id: string;
+      name?: string;
+      context_hints?: string[];
+    };
+    type AdRaw = {
+      id: string;
+      name?: string;
+      creative?: { headline?: string; body?: string; destination_url?: string };
+    };
+
+    try {
+      const campRes = await oaiAds<CampaignRaw | { data: CampaignRaw }>(
+        creds.apiKey,
+        `/campaigns/${encodeURIComponent(data.id)}`,
+      );
+      const campaign = ("data" in (campRes as any) ? (campRes as any).data : campRes) as CampaignRaw;
+
+      const insightFields = ["readable_time", "clicks", "impressions", "spend"];
+      let insightsRes: { data: InsightRow[] } | null = null;
+      let end: Date | null = null;
+      for (let endOffsetDays = 1; endOffsetDays <= 7; endOffsetDays++) {
+        const candidateEnd = utcDayFromToday(endOffsetDays);
+        const candidateStart = new Date(candidateEnd);
+        candidateStart.setUTCDate(candidateEnd.getUTCDate() - (data.days - 1));
+        const params = new URLSearchParams();
+        params.append("time_granularity", "daily");
+        params.append("aggregation_level", "campaign");
+        params.append("campaign_ids[]", data.id);
+        for (const f of insightFields) params.append("fields[]", f);
+        params.append(
+          "time_ranges[]",
+          JSON.stringify({
+            type: "date_range",
+            since: isoUtcDay(candidateStart),
+            until: isoUtcDay(candidateEnd),
+          }),
+        );
+        params.append("limit", "1000");
+        try {
+          insightsRes = await oaiAds<{ data: InsightRow[] }>(
+            creds.apiKey,
+            `/ad_account/insights?${params.toString()}`,
+          );
+          end = candidateEnd;
+          break;
+        } catch (error) {
+          const isFuture =
+            error instanceof OpenAIAdsApiError &&
+            error.status === 400 &&
+            (error.apiMessage ?? error.bodyText).includes("time_ranges.end cannot be in the future");
+          if (isFuture && endOffsetDays < 7) continue;
+          throw error;
+        }
+      }
+
+      const byDate = new Map<string, { spend: number; clicks: number; impressions: number }>();
+      for (const row of insightsRes?.data ?? []) {
+        const date = (row.readable_time ?? "").slice(0, 10);
+        if (!date) continue;
+        const cur = byDate.get(date) ?? { spend: 0, clicks: 0, impressions: 0 };
+        cur.spend += Number(row.spend ?? 0);
+        cur.clicks += Number(row.clicks ?? 0);
+        cur.impressions += Number(row.impressions ?? 0);
+        byDate.set(date, cur);
+      }
+      const series: { date: string; spend: number; clicks: number; impressions: number }[] = [];
+      const endDate = end ?? utcDayFromToday(1);
+      for (let i = data.days - 1; i >= 0; i--) {
+        const d = new Date(endDate);
+        d.setUTCDate(endDate.getUTCDate() - i);
+        const key = isoUtcDay(d);
+        const row = byDate.get(key) ?? { spend: 0, clicks: 0, impressions: 0 };
+        series.push({ date: key, ...row });
+      }
+      const totals = series.reduce(
+        (a, s) => ({
+          spend: a.spend + s.spend,
+          clicks: a.clicks + s.clicks,
+          impressions: a.impressions + s.impressions,
+        }),
+        { spend: 0, clicks: 0, impressions: 0 },
+      );
+
+      let adGroups: { id: string; name: string; contextHints: string[] }[] = [];
+      let ads: { id: string; name: string; headline: string; body: string; destinationUrl: string; adGroupId: string }[] = [];
+      try {
+        const agRes = await oaiAds<{ data: AdGroupRaw[] }>(
+          creds.apiKey,
+          `/ad_groups?campaign_id=${encodeURIComponent(data.id)}`,
+        );
+        adGroups = (agRes.data ?? []).map((g) => ({
+          id: g.id,
+          name: g.name ?? g.id,
+          contextHints: Array.isArray(g.context_hints) ? g.context_hints : [],
+        }));
+
+        for (const g of adGroups) {
+          try {
+            const adRes = await oaiAds<{ data: AdRaw[] }>(
+              creds.apiKey,
+              `/ads?ad_group_id=${encodeURIComponent(g.id)}`,
+            );
+            for (const a of adRes.data ?? []) {
+              ads.push({
+                id: a.id,
+                name: a.name ?? a.id,
+                headline: a.creative?.headline ?? "",
+                body: a.creative?.body ?? "",
+                destinationUrl: a.creative?.destination_url ?? "",
+                adGroupId: g.id,
+              });
+            }
+          } catch {
+            // skip
+          }
+        }
+      } catch {
+        // adgroups not available — leave empty
+      }
+
+      const dailyMicros = Number(campaign.budget?.daily_spend_limit_micros ?? 0);
+      const lifetimeMicros = Number(campaign.budget?.lifetime_spend_limit_micros ?? 0);
+
+      const ctr = totals.impressions ? (totals.clicks / totals.impressions) * 100 : 0;
+      const cpc = totals.clicks ? totals.spend / totals.clicks : 0;
+
+      return {
+        campaign: {
+          id: campaign.id,
+          name: campaign.name,
+          status: (campaign.status ?? "paused").toLowerCase(),
+          startDate: campaign.start_date ?? campaign.created_at ?? null,
+          dailyBudget: dailyMicros ? dailyMicros / 1_000_000 : null,
+          lifetimeBudget: lifetimeMicros ? lifetimeMicros / 1_000_000 : null,
+        },
+        totals: {
+          spend: Math.round(totals.spend * 100) / 100,
+          clicks: totals.clicks,
+          impressions: totals.impressions,
+          ctr,
+          cpc,
+        },
+        series: series.map((s) => ({
+          date: s.date,
+          spend: Math.round(s.spend * 100) / 100,
+          clicks: s.clicks,
+          impressions: s.impressions,
+        })),
+        adGroups,
+        ads,
+      };
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
+  });
+
+export const updateCampaignStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; status: "active" | "paused" }) =>
+    z
+      .object({
+        id: z.string().trim().min(1).max(128),
+        status: z.enum(["active", "paused"]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) throw new Error("OpenAI Ads is not connected");
+    try {
+      await oaiAds(creds.apiKey, `/campaigns/${encodeURIComponent(data.id)}`, {
+        method: "POST",
+        body: JSON.stringify({ status: data.status }),
+      });
+      return { ok: true as const, status: data.status };
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
+  });
+
 // ---------- UTM ----------
 export const listUtmLinks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
