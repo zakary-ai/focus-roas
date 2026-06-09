@@ -63,6 +63,7 @@ function CampaignBuilderPage() {
   const [newHint, setNewHint] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [remoteCampaignId, setRemoteCampaignId] = useState<string | null>(null);
+  const [maxCpcBid, setMaxCpcBid] = useState<string>("3.50");
 
   useEffect(() => {
     try {
@@ -150,6 +151,7 @@ function CampaignBuilderPage() {
     mutationFn: (input: {
       campaignName: string;
       lifetimeBudgetMicros: number;
+      maxCpcBidMicros: number;
       headline: string;
       body: string;
       destinationUrl: string;
@@ -460,9 +462,15 @@ function CampaignBuilderPage() {
                           toast.error(`OpenAI Ads allows max 10 context hints. Remove ${hints.length - 10} before creating.`);
                           return;
                         }
+                        const cpc = Number(maxCpcBid);
+                        if (!cpc || cpc <= 0) {
+                          toast.error("Enter a valid max CPC bid");
+                          return;
+                        }
                         remote.mutate({
                           campaignName: result.campaignName,
                           lifetimeBudgetMicros: result.lifetimeBudgetMicros,
+                          maxCpcBidMicros: Math.round(cpc * 1_000_000),
                           headline: selectedHeadline,
                           body: selectedBody,
                           destinationUrl: result.utmUrl,
