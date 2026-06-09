@@ -38,7 +38,6 @@ function Onboarding() {
 
   const [step, setStep] = useState(1);
   const [apiKey, setApiKey] = useState("");
-  const [adAccountId, setAdAccountId] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -55,19 +54,15 @@ function Onboarding() {
 
   async function step1Submit() {
     if (!apiKey.trim()) return toast.error("Enter your API key");
-    if (!/^adacct_[A-Za-z0-9]{6,}$/.test(adAccountId.trim()))
-      return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
     setBusy(true);
     try {
-      const result = await verifyFn({
-        data: { apiKey: apiKey.trim(), adAccountId: adAccountId.trim() },
-      });
+      const result = await verifyFn({ data: { apiKey: apiKey.trim() } });
       if (!result.ok) {
         toast.error(result.errorMessage);
         return;
       }
       await refetch();
-      toast.success("Connected");
+      toast.success(`Connected to ${result.accountName}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not connect");
     } finally {
@@ -132,18 +127,6 @@ function Onboarding() {
               >
                 Need help finding your API key?
               </Link>
-            </div>
-            <div>
-              <Label htmlFor="acct">Ad Account ID</Label>
-              <Input
-                id="acct"
-                value={adAccountId}
-                onChange={(e) => setAdAccountId(e.target.value)}
-                placeholder="adacct_xxxxxxxxx"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Find it in OpenAI Ads Manager → Settings → Account. Starts with <code>adacct_</code>.
-              </p>
             </div>
             {settings?.apiKeyConnected && (
               <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
