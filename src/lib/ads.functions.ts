@@ -12,7 +12,7 @@ class OpenAIAdsApiError extends Error {
   apiMessage: string | null;
 
   constructor(status: number, bodyText: string, apiMessage: string | null) {
-    super(`OpenAI Ads API ${status}: ${apiMessage ?? bodyText || "Request failed"}`);
+    super(`OpenAI Ads API ${status}: ${(apiMessage ?? bodyText) || "Request failed"}`);
     this.name = "OpenAIAdsApiError";
     this.status = status;
     this.bodyText = bodyText;
@@ -266,15 +266,26 @@ export const listCampaigns = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const creds = await getCreds(context.supabase, context.userId);
     if (!creds) return { connected: false as const, campaigns: [] };
-    const res = await oaiAds<{ data: ApiCampaign[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/campaigns?include_insight_metrics=true",
-    );
-    return {
-      connected: true as const,
-      campaigns: (res.data ?? []).map((c) => ({ id: c.id, name: c.name })),
-    };
+    try {
+      const res = await oaiAds<{ data: ApiCampaign[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/campaigns?include_insight_metrics=true",
+      );
+      return {
+        connected: true as const,
+        campaigns: (res.data ?? []).map((c) => ({ id: c.id, name: c.name })),
+      };
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          campaigns: [],
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
   });
 
 export const getDashboardMetrics = createServerFn({ method: "POST" })
@@ -309,20 +320,31 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       clicks?: number;
       impressions?: number;
     };
-    const dailyRes = await oaiAds<{ data: InsightRow[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/insights",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          start_date: isoDay(start),
-          end_date: isoDay(end),
-          metrics: ["spend", "revenue", "clicks", "impressions"],
-          breakdown: ["date"],
-        }),
-      },
-    );
+    let dailyRes: { data: InsightRow[] };
+    try {
+      dailyRes = await oaiAds<{ data: InsightRow[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/insights",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            start_date: isoDay(start),
+            end_date: isoDay(end),
+            metrics: ["spend", "revenue", "clicks", "impressions"],
+            breakdown: ["date"],
+          }),
+        },
+      );
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
     const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
     for (const r of dailyRes.data ?? []) {
       if (!r.date) continue;
