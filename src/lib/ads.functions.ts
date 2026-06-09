@@ -97,8 +97,12 @@ export const verifyApiKey = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
-    const existingCreds = await getCreds(supabase, userId);
-    const apiKey = data.apiKey?.trim() || existingCreds?.apiKey;
+    const { data: existing } = await supabase
+      .from("user_settings")
+      .select("openai_ads_api_key")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const apiKey = data.apiKey?.trim() || existing?.openai_ads_api_key || undefined;
     if (!apiKey) {
       throw new Error("Enter your API key");
     }
