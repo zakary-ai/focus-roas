@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { to: "/utm", label: "UTM Generator", icon: Link2 },
+  { to: "/utm", label: "Campaign Builder", icon: Link2 },
   { to: "/conversions", label: "Conversion Setup", icon: CheckSquare },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;

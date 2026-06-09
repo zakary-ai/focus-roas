@@ -497,3 +497,236 @@ export const saveUtmLink = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- Campaign Builder ----------
+function slugifyName(s: string) {
+  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function buildUtmUrl(productUrl: string, campaignName: string) {
+  try {
+    const u = new URL(productUrl);
+    u.searchParams.set("utm_source", "openai");
+    u.searchParams.set("utm_medium", "cpc");
+    u.searchParams.set("utm_campaign", slugifyName(campaignName));
+    return u.toString();
+  } catch {
+    return productUrl;
+  }
+}
+
+const BuildInput = z.object({
+  productName: z.string().trim().min(1).max(200),
+  productUrl: z.string().trim().url().max(500),
+  productDescription: z.string().trim().min(1).max(2000),
+  monthlyBudget: z.number().positive().max(1_000_000),
+  targetAudience: z.string().trim().min(1).max(500),
+  brand: z.string().trim().max(100).optional(),
+});
+
+export const buildCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BuildInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("connected_account_name, store_url")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const brand =
+      data.brand?.trim() ||
+      (settings?.connected_account_name as string | undefined)?.trim() ||
+      "Brand";
+
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
+    const systemPrompt =
+      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. Headlines must be <=60 chars, body copy <=150 chars, hints are 1-3 word targeting keywords.";
+    const userPrompt = `Generate ad copy for this product.
+Product: ${data.productName}
+Description: ${data.productDescription}
+Target audience: ${data.targetAudience}
+Monthly budget: $${data.monthlyBudget}
+
+Return JSON with this exact shape:
+{"headlines":["...","...","..."],"bodies":["...","...","..."],"context_hints":["...","...","..."]}`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const txt = await aiRes.text().catch(() => "");
+      if (aiRes.status === 429) throw new Error("AI rate limit hit. Try again shortly.");
+      if (aiRes.status === 402) throw new Error("AI credits exhausted. Please add credits.");
+      throw new Error(`AI generation failed: ${aiRes.status} ${txt.slice(0, 200)}`);
+    }
+    const aiJson = (await aiRes.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = aiJson.choices?.[0]?.message?.content ?? "{}";
+    let parsed: { headlines?: string[]; bodies?: string[]; context_hints?: string[] } = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
+    const headlines = (parsed.headlines ?? []).slice(0, 3).map((s) => String(s).slice(0, 60));
+    const bodies = (parsed.bodies ?? []).slice(0, 3).map((s) => String(s).slice(0, 150));
+    const context_hints = (parsed.context_hints ?? []).slice(0, 3).map((s) => String(s).slice(0, 40));
+
+    while (headlines.length < 3) headlines.push(`${data.productName} — shop now`);
+    while (bodies.length < 3) bodies.push(`Discover ${data.productName}. Built for ${data.targetAudience}.`);
+    while (context_hints.length < 3) context_hints.push(data.targetAudience.split(/[,\s]+/)[0] ?? "buyers");
+
+    const campaignName = `${brand} - ${data.productName} - v1`;
+    const utmUrl = buildUtmUrl(data.productUrl, campaignName);
+    const dailyBudget = Math.round((data.monthlyBudget / 30) * 100) / 100;
+    const lifetimeBudgetMicros = Math.round(data.monthlyBudget * 1_000_000);
+
+    return {
+      campaignName,
+      utmUrl,
+      dailyBudget,
+      lifetimeBudgetMicros,
+      headlines,
+      bodies,
+      contextHints: context_hints,
+      brand,
+    };
+  });
+
+const SaveBuildInput = z.object({
+  productName: z.string().min(1).max(200),
+  productUrl: z.string().url().max(500),
+  productDescription: z.string().max(2000).optional(),
+  monthlyBudget: z.number().positive(),
+  targetAudience: z.string().max(500).optional(),
+  campaignName: z.string().min(1).max(200),
+  selectedHeadline: z.string().max(200),
+  selectedBody: z.string().max(500),
+  headlines: z.array(z.string()).max(10),
+  bodies: z.array(z.string()).max(10),
+  contextHints: z.array(z.string()).max(10),
+  utmUrl: z.string().url().max(1000),
+  remoteCampaignId: z.string().max(128).optional(),
+});
+
+export const saveCampaignBuild = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => SaveBuildInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabase
+      .from("campaign_builds")
+      .insert({
+        user_id: userId,
+        product_name: data.productName,
+        product_url: data.productUrl,
+        product_description: data.productDescription ?? null,
+        monthly_budget: data.monthlyBudget,
+        target_audience: data.targetAudience ?? null,
+        campaign_name: data.campaignName,
+        selected_headline: data.selectedHeadline,
+        selected_body: data.selectedBody,
+        headlines: data.headlines,
+        bodies: data.bodies,
+        context_hints: data.contextHints,
+        utm_url: data.utmUrl,
+        remote_campaign_id: data.remoteCampaignId ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { ok: true, id: row.id as string };
+  });
+
+export const listCampaignBuilds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("campaign_builds")
+      .select(
+        "id, product_name, campaign_name, selected_headline, selected_body, utm_url, remote_campaign_id, created_at",
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const CreateRemoteInput = z.object({
+  campaignName: z.string().min(1).max(200),
+  dailyBudget: z.number().positive(),
+  lifetimeBudgetMicros: z.number().int().positive(),
+  headline: z.string().min(1).max(200),
+  body: z.string().min(1).max(500),
+  destinationUrl: z.string().url().max(1000),
+  contextHints: z.array(z.string().min(1).max(80)).min(1).max(10),
+});
+
+export const createCampaignViaApi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => CreateRemoteInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) throw new Error("OpenAI Ads is not connected. Connect your API key first.");
+
+    try {
+      const campaign = await oaiAds<{ id: string }>(creds.apiKey, "/campaigns", {
+        method: "POST",
+        body: JSON.stringify({
+          name: data.campaignName,
+          objective: "OUTCOME_TRAFFIC",
+          status: "PAUSED",
+          lifetime_budget: data.lifetimeBudgetMicros,
+        }),
+      });
+
+      const adGroup = await oaiAds<{ id: string }>(creds.apiKey, "/ad_groups", {
+        method: "POST",
+        body: JSON.stringify({
+          campaign_id: campaign.id,
+          name: `${data.campaignName} - AG1`,
+          status: "PAUSED",
+          context_hints: data.contextHints,
+        }),
+      });
+
+      const ad = await oaiAds<{ id: string }>(creds.apiKey, "/ads", {
+        method: "POST",
+        body: JSON.stringify({
+          ad_group_id: adGroup.id,
+          name: `${data.campaignName} - Ad1`,
+          status: "PAUSED",
+          creative: {
+            headline: data.headline,
+            body: data.body,
+            destination_url: data.destinationUrl,
+          },
+        }),
+      });
+
+      return { ok: true as const, campaignId: campaign.id, adGroupId: adGroup.id, adId: ad.id };
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
+  });
