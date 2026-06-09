@@ -602,7 +602,8 @@ Return JSON with this exact shape:
     while (bodies.length < 3) bodies.push(`Discover ${data.productName}. Built for ${data.targetAudience}.`);
     while (context_hints.length < 3) context_hints.push(data.targetAudience.split(/[,]+/)[0]?.trim().toLowerCase() ?? "buyers");
 
-    const campaignName = `${brand} - ${data.productName} - v1`;
+    const campaignName =
+      data.campaignName?.trim() || `${brand} - ${data.productName} - v1`;
     const utmUrl = buildUtmUrl(data.productUrl, campaignName);
     const dailyBudget = Math.round((data.monthlyBudget / 30) * 100) / 100;
     const lifetimeBudgetMicros = Math.round(data.monthlyBudget * 1_000_000);
