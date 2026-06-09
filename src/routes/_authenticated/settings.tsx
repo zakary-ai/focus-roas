@@ -46,16 +46,15 @@ function SettingsPage() {
 
   async function updateKey() {
     const key = newKey.trim();
-    if (!key) return toast.error("Enter the new API key");
-    const acctId = (settings?.adAccountId || newAcct.trim());
+    const acctId = newAcct.trim();
     if (!acctId) return toast.error("Ad account ID is required");
     if (!/^adacct_[A-Za-z0-9]{6,}$/.test(acctId))
       return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
     try {
-      await verifyFn({ data: { apiKey: key, adAccountId: acctId } });
+      await verifyFn({ data: { apiKey: key || undefined, adAccountId: acctId } });
       setNewKey("");
       await refetch();
-      toast.success("API key updated");
+      toast.success("Settings updated");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update");
     }
@@ -86,12 +85,6 @@ function SettingsPage() {
               <Label>Current key</Label>
               <Input readOnly value={settings?.apiKeyMasked ?? "Not connected"} className="font-mono" />
             </div>
-            {settings?.adAccountId ? (
-              <div>
-                <Label>Ad Account ID</Label>
-                <Input readOnly value={settings.adAccountId} className="font-mono" />
-              </div>
-            ) : null}
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="newkey">Replace with new key</Label>
@@ -102,18 +95,23 @@ function SettingsPage() {
               <div className="flex gap-2">
                 <Input id="newkey" type="password" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="sk-ads-..." />
               </div>
-              {!settings?.adAccountId && (
-                <div className="mt-2">
-                  <Label htmlFor="newacct">Ad Account ID</Label>
-                  <Input
-                    id="newacct"
-                    value={newAcct}
-                    onChange={(e) => setNewAcct(e.target.value)}
-                    placeholder="adacct_xxxxxxxxx"
-                  />
-                </div>
-              )}
-              <Button className="mt-3" onClick={updateKey} disabled={!newKey.trim()}>Update</Button>
+              <div className="mt-2">
+                <Label htmlFor="newacct">Ad Account ID</Label>
+                <Input
+                  id="newacct"
+                  value={newAcct}
+                  onChange={(e) => setNewAcct(e.target.value)}
+                  placeholder="adacct_xxxxxxxxx"
+                  className="font-mono"
+                />
+              </div>
+              <Button
+                className="mt-3"
+                onClick={updateKey}
+                disabled={!newKey.trim() && newAcct.trim() === (settings?.adAccountId ?? "")}
+              >
+                Update
+              </Button>
             </div>
           </CardContent>
         </Card>

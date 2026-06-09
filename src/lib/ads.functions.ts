@@ -84,10 +84,10 @@ export const getSettings = createServerFn({ method: "GET" })
 
 export const verifyApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { apiKey: string; adAccountId: string }) =>
+  .inputValidator((d: { apiKey?: string; adAccountId: string }) =>
     z
       .object({
-        apiKey: z.string().trim().min(8, "Key looks too short").max(200),
+        apiKey: z.string().trim().min(8, "Key looks too short").max(200).optional(),
         adAccountId: z
           .string()
           .trim()
@@ -97,9 +97,14 @@ export const verifyApiKey = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
-    // Verify by hitting the real API.
+    const existingCreds = await getCreds(supabase, userId);
+    const apiKey = data.apiKey?.trim() || existingCreds?.apiKey;
+    if (!apiKey) {
+      throw new Error("Enter your API key");
+    }
+
     try {
-      await oaiAds<unknown>(data.apiKey, data.adAccountId, "/campaigns?limit=1");
+      await oaiAds<unknown>(apiKey, data.adAccountId, "/campaigns?limit=1");
     } catch (e) {
       throw new Error(
         e instanceof Error
@@ -107,13 +112,14 @@ export const verifyApiKey = createServerFn({ method: "POST" })
           : "Could not connect to OpenAI Ads",
       );
     }
+
     const accountName = data.adAccountId;
     const { error } = await supabase
       .from("user_settings")
       .upsert(
         {
           user_id: userId,
-          openai_ads_api_key: data.apiKey,
+          openai_ads_api_key: apiKey,
           openai_ad_account_id: data.adAccountId,
           connected_account_name: accountName,
         },
