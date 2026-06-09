@@ -455,6 +455,19 @@ function CampaignBuilderPage() {
                   </ol>
 
                   <div className="mt-6 flex gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="maxcpc">Max CPC bid ($)</Label>
+                      <Input
+                        id="maxcpc"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        className="w-32"
+                        value={maxCpcBid}
+                        onChange={(e) => setMaxCpcBid(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">Recommended: $3.50+</p>
+                    </div>
                     <Button variant="outline" onClick={saveDraft}>Save draft</Button>
                     <Button
                       onClick={() => {
