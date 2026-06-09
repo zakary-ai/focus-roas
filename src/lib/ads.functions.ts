@@ -6,6 +6,58 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const OPENAI_ADS_BASE = "https://api.ads.openai.com/v1";
 const AD_ACCOUNT_RE = /^adacct_[A-Za-z0-9]{6,}$/;
 
+class OpenAIAdsApiError extends Error {
+  status: number;
+  bodyText: string;
+  apiMessage: string | null;
+
+  constructor(status: number, bodyText: string, apiMessage: string | null) {
+    super(`OpenAI Ads API ${status}: ${(apiMessage ?? bodyText) || "Request failed"}`);
+    this.name = "OpenAIAdsApiError";
+    this.status = status;
+    this.bodyText = bodyText;
+    this.apiMessage = apiMessage;
+  }
+}
+
+function parseAdsApiMessage(bodyText: string): string | null {
+  try {
+    const parsed = JSON.parse(bodyText);
+    return typeof parsed?.error?.message === "string" ? parsed.error.message : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatAdsConnectionError(error: unknown): string {
+  if (error instanceof OpenAIAdsApiError) {
+    if (error.status === 401) {
+      return "The API key was rejected. Check that you pasted the correct OpenAI Ads API key.";
+    }
+
+    if (
+      error.status === 403 &&
+      /does not have access to the ad account/i.test(error.apiMessage ?? error.bodyText)
+    ) {
+      return "This API key does not have access to that ad account. Check the ad account ID and make sure this key belongs to a user who can access it.";
+    }
+
+    if (error.status === 404) {
+      return "That OpenAI Ads resource could not be found. Recheck the ID you entered.";
+    }
+
+    return error.apiMessage
+      ? `OpenAI Ads API ${error.status}: ${error.apiMessage}`
+      : `OpenAI Ads API ${error.status}: ${error.bodyText.slice(0, 300) || "Request failed"}`;
+  }
+
+  return error instanceof Error ? error.message : "Could not connect to OpenAI Ads";
+}
+
+function isRecoverableAdsAuthError(error: unknown): error is OpenAIAdsApiError {
+  return error instanceof OpenAIAdsApiError && [401, 403, 404].includes(error.status);
+}
+
 async function oaiAds<T>(
   apiKey: string,
   accountId: string,
@@ -23,8 +75,10 @@ async function oaiAds<T>(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
-      `OpenAI Ads API ${res.status}: ${body.slice(0, 300) || res.statusText}`,
+    throw new OpenAIAdsApiError(
+      res.status,
+      body.slice(0, 1000) || res.statusText,
+      parseAdsApiMessage(body),
     );
   }
   return (await res.json()) as T;
@@ -104,17 +158,13 @@ export const verifyApiKey = createServerFn({ method: "POST" })
       .maybeSingle();
     const apiKey = data.apiKey?.trim() || existing?.openai_ads_api_key || undefined;
     if (!apiKey) {
-      throw new Error("Enter your API key");
+      return { ok: false as const, errorMessage: "Enter your API key" };
     }
 
     try {
       await oaiAds<unknown>(apiKey, data.adAccountId, "/campaigns?limit=1");
     } catch (e) {
-      throw new Error(
-        e instanceof Error
-          ? `Could not connect to OpenAI Ads — ${e.message}`
-          : "Could not connect to OpenAI Ads",
-      );
+      return { ok: false as const, errorMessage: formatAdsConnectionError(e) };
     }
 
     const accountName = data.adAccountId;
@@ -130,7 +180,7 @@ export const verifyApiKey = createServerFn({ method: "POST" })
         { onConflict: "user_id" },
       );
     if (error) throw new Error(error.message);
-    return { ok: true, accountName };
+    return { ok: true as const, accountName };
   });
 
 export const updateStoreUrl = createServerFn({ method: "POST" })
@@ -216,15 +266,26 @@ export const listCampaigns = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const creds = await getCreds(context.supabase, context.userId);
     if (!creds) return { connected: false as const, campaigns: [] };
-    const res = await oaiAds<{ data: ApiCampaign[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/campaigns?include_insight_metrics=true",
-    );
-    return {
-      connected: true as const,
-      campaigns: (res.data ?? []).map((c) => ({ id: c.id, name: c.name })),
-    };
+    try {
+      const res = await oaiAds<{ data: ApiCampaign[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/campaigns?include_insight_metrics=true",
+      );
+      return {
+        connected: true as const,
+        campaigns: (res.data ?? []).map((c) => ({ id: c.id, name: c.name })),
+      };
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          campaigns: [],
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
   });
 
 export const getDashboardMetrics = createServerFn({ method: "POST" })
@@ -259,20 +320,31 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       clicks?: number;
       impressions?: number;
     };
-    const dailyRes = await oaiAds<{ data: InsightRow[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/insights",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          start_date: isoDay(start),
-          end_date: isoDay(end),
-          metrics: ["spend", "revenue", "clicks", "impressions"],
-          breakdown: ["date"],
-        }),
-      },
-    );
+    let dailyRes: { data: InsightRow[] };
+    try {
+      dailyRes = await oaiAds<{ data: InsightRow[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/insights",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            start_date: isoDay(start),
+            end_date: isoDay(end),
+            metrics: ["spend", "revenue", "clicks", "impressions"],
+            breakdown: ["date"],
+          }),
+        },
+      );
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
     const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
     for (const r of dailyRes.data ?? []) {
       if (!r.date) continue;
@@ -300,11 +372,22 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     );
 
     // Per-campaign table via /campaigns?include_insight_metrics=true
-    const campRes = await oaiAds<{ data: ApiCampaign[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/campaigns?include_insight_metrics=true",
-    );
+    let campRes: { data: ApiCampaign[] };
+    try {
+      campRes = await oaiAds<{ data: ApiCampaign[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/campaigns?include_insight_metrics=true",
+      );
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
     const campaigns = (campRes.data ?? []).map((c) => {
       const m = c.insight_metrics ?? {};
       const spend = Number(m.spend ?? 0);
@@ -350,11 +433,15 @@ export const getCampaign = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const creds = await getCreds(context.supabase, context.userId);
     if (!creds) throw new Error("OpenAI Ads is not connected");
-    return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
-      creds.apiKey,
-      creds.accountId,
-      `/campaigns/${encodeURIComponent(data.id)}`,
-    );
+    try {
+      return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
+        creds.apiKey,
+        creds.accountId,
+        `/campaigns/${encodeURIComponent(data.id)}`,
+      );
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
   });
 
 // ---------- UTM ----------
