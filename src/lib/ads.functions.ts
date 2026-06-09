@@ -372,11 +372,22 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     );
 
     // Per-campaign table via /campaigns?include_insight_metrics=true
-    const campRes = await oaiAds<{ data: ApiCampaign[] }>(
-      creds.apiKey,
-      creds.accountId,
-      "/campaigns?include_insight_metrics=true",
-    );
+    let campRes: { data: ApiCampaign[] };
+    try {
+      campRes = await oaiAds<{ data: ApiCampaign[] }>(
+        creds.apiKey,
+        creds.accountId,
+        "/campaigns?include_insight_metrics=true",
+      );
+    } catch (error) {
+      if (isRecoverableAdsAuthError(error)) {
+        return {
+          connected: false as const,
+          errorMessage: formatAdsConnectionError(error),
+        };
+      }
+      throw error;
+    }
     const campaigns = (campRes.data ?? []).map((c) => {
       const m = c.insight_metrics ?? {};
       const spend = Number(m.spend ?? 0);
@@ -422,11 +433,15 @@ export const getCampaign = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const creds = await getCreds(context.supabase, context.userId);
     if (!creds) throw new Error("OpenAI Ads is not connected");
-    return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
-      creds.apiKey,
-      creds.accountId,
-      `/campaigns/${encodeURIComponent(data.id)}`,
-    );
+    try {
+      return await oaiAds<{ data: ApiCampaign } | ApiCampaign>(
+        creds.apiKey,
+        creds.accountId,
+        `/campaigns/${encodeURIComponent(data.id)}`,
+      );
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
   });
 
 // ---------- UTM ----------
