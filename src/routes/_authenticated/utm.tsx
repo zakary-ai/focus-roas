@@ -86,6 +86,20 @@ function CampaignBuilderPage() {
       setRemoteCampaignId(null);
       setChecklist({});
       toast.success("Campaign ready");
+      save.mutate({
+        productName,
+        productUrl,
+        productDescription,
+        monthlyBudget: Number(monthlyBudget),
+        targetAudience,
+        campaignName: r.campaignName,
+        selectedHeadline: r.headlines[0] ?? "",
+        selectedBody: r.bodies[0] ?? "",
+        headlines: r.headlines,
+        bodies: r.bodies,
+        contextHints: r.contextHints,
+        utmUrl: r.utmUrl,
+      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
