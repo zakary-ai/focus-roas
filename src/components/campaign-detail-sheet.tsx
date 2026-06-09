@@ -7,13 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { Copy } from "lucide-react";
@@ -167,20 +166,28 @@ export function CampaignDetailSheet({
                   <Kpi label="CPC" value={fmtMoney(data.totals.cpc)} />
                   {shopifyConnected && <Kpi label="ROAS" value="—" />}
                 </div>
-                <div className="mt-4 h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.series}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="date" fontSize={11} />
-                      <YAxis yAxisId="left" fontSize={11} />
-                      <YAxis yAxisId="right" orientation="right" fontSize={11} />
-                      <Tooltip />
-                      <Legend />
-                      <Line yAxisId="left" type="monotone" dataKey="spend" stroke="var(--chart-1)" name="Spend" strokeWidth={2} dot={false} />
-                      <Line yAxisId="right" type="monotone" dataKey="clicks" stroke="var(--chart-2)" name="Clicks" strokeWidth={2} dot={false} />
-                      <Line yAxisId="right" type="monotone" dataKey="impressions" stroke="var(--chart-3)" name="Impressions" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="mt-4 space-y-3">
+                  <MiniMetricChart
+                    series={data.series}
+                    dataKey="spend"
+                    label="Spend"
+                    color="var(--chart-1)"
+                    formatValue={(v) => fmtMoney(v)}
+                  />
+                  <MiniMetricChart
+                    series={data.series}
+                    dataKey="clicks"
+                    label="Clicks"
+                    color="var(--chart-2)"
+                    formatValue={(v) => v.toLocaleString()}
+                  />
+                  <MiniMetricChart
+                    series={data.series}
+                    dataKey="impressions"
+                    label="Impressions"
+                    color="var(--chart-3)"
+                    formatValue={(v) => v.toLocaleString()}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -235,6 +242,62 @@ function Kpi({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-semibold">{value}</div>
+    </div>
+  );
+}
+
+function MiniMetricChart({
+  series,
+  dataKey,
+  label,
+  color,
+  formatValue,
+}: {
+  series: Array<{ date: string; spend: number; clicks: number; impressions: number }>;
+  dataKey: "spend" | "clicks" | "impressions";
+  label: string;
+  color: string;
+  formatValue: (v: number) => string;
+}) {
+  const total = series.reduce((sum, s) => sum + (s[dataKey] as number), 0);
+  const gradId = `grad-${dataKey}`;
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-1 flex items-baseline justify-between">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        </div>
+        <span className="text-sm font-semibold">{formatValue(total)}</span>
+      </div>
+      <div className="h-20">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={series} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
+            <XAxis dataKey="date" fontSize={10} tickLine={false} axisLine={false} minTickGap={32} />
+            <YAxis hide domain={[0, "auto"]} />
+            <Tooltip
+              formatter={(v: number) => [formatValue(v), label]}
+              labelClassName="text-xs"
+              contentStyle={{ fontSize: 12, borderRadius: 6 }}
+            />
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2}
+              fill={`url(#${gradId})`}
+              dot={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
