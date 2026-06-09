@@ -702,7 +702,6 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         method: "POST",
         body: JSON.stringify({
           name: data.campaignName,
-          objective: "OUTCOME_TRAFFIC",
           status: "PAUSED",
           budget: data.lifetimeBudgetMicros,
         }),
