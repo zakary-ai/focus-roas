@@ -86,6 +86,12 @@ function SettingsPage() {
               <Label>Current key</Label>
               <Input readOnly value={settings?.apiKeyMasked ?? "Not connected"} className="font-mono" />
             </div>
+            {settings?.adAccountId ? (
+              <div>
+                <Label>Ad Account ID</Label>
+                <Input readOnly value={settings.adAccountId} className="font-mono" />
+              </div>
+            ) : null}
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="newkey">Replace with new key</Label>
@@ -96,15 +102,17 @@ function SettingsPage() {
               <div className="flex gap-2">
                 <Input id="newkey" type="password" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="sk-ads-..." />
               </div>
-              <div className="mt-2">
-                <Label htmlFor="newacct">Ad Account ID</Label>
-                <Input
-                  id="newacct"
-                  value={newAcct}
-                  onChange={(e) => setNewAcct(e.target.value)}
-                  placeholder="adacct_xxxxxxxxx"
-                />
-              </div>
+              {!settings?.adAccountId && (
+                <div className="mt-2">
+                  <Label htmlFor="newacct">Ad Account ID</Label>
+                  <Input
+                    id="newacct"
+                    value={newAcct}
+                    onChange={(e) => setNewAcct(e.target.value)}
+                    placeholder="adacct_xxxxxxxxx"
+                  />
+                </div>
+              )}
               <Button className="mt-3" onClick={updateKey} disabled={!newKey.trim()}>Update</Button>
             </div>
           </CardContent>
