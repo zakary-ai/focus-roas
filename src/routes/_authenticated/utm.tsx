@@ -49,6 +49,7 @@ function CampaignBuilderPage() {
   const createRemoteFn = useServerFn(createCampaignViaApi);
   const listFn = useServerFn(listCampaignBuilds);
 
+  const [campaignNameInput, setCampaignNameInput] = useState("");
   const [productName, setProductName] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [productDescription, setProductDescription] = useState("");
