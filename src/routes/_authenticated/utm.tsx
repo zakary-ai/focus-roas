@@ -203,6 +203,10 @@ function CampaignBuilderPage() {
           <CardContent>
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="space-y-1.5">
+                <Label htmlFor="cname">Campaign Name</Label>
+                <Input id="cname" value={campaignNameInput} onChange={(e) => setCampaignNameInput(e.target.value)} placeholder="Spring Gloves Promo" />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="pname">Product Name</Label>
                 <Input id="pname" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Blue Nitrile Gloves" />
               </div>
