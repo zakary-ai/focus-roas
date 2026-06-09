@@ -287,18 +287,46 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     start.setDate(end.getDate() - (data.days - 1));
     const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
-    // Fetch campaigns, then per-campaign daily insights
     type InsightRow = {
-      date?: string;
-      start_date?: string;
-      spend?: number;
-      revenue?: number;
-      clicks?: number;
-      impressions?: number;
+      readable_time?: string;
+      campaign_id?: string;
+      campaign_name?: string;
+      spend?: number | string;
+      clicks?: number | string;
+      impressions?: number | string;
+      ctr?: number | string;
+      cpc?: number | string;
     };
-    let campRes: { data: ApiCampaign[] };
+
+    const since = isoDay(start);
+    const until = isoDay(end);
+    const params = new URLSearchParams();
+    params.append("time_granularity", "daily");
+    params.append("aggregation_level", "campaign");
+    for (const f of [
+      "readable_time",
+      "campaign_id",
+      "campaign_name",
+      "clicks",
+      "impressions",
+      "spend",
+      "ctr",
+      "cpc",
+    ]) {
+      params.append("fields[]", f);
+    }
+    params.append(
+      "time_ranges[]",
+      JSON.stringify({ type: "date_range", since, until }),
+    );
+    params.append("limit", "1000");
+
+    let insightsRes: { data: InsightRow[] };
     try {
-      campRes = await oaiAds<{ data: ApiCampaign[] }>(creds.apiKey, "/campaigns");
+      insightsRes = await oaiAds<{ data: InsightRow[] }>(
+        creds.apiKey,
+        `/ad_account/insights?${params.toString()}`,
+      );
     } catch (error) {
       if (isRecoverableAdsAuthError(error)) {
         return { connected: false as const, errorMessage: formatAdsConnectionError(error) };
@@ -306,54 +334,43 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       throw error;
     }
 
-    const startKey = isoDay(start);
     const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
-    const campaigns: {
-      id: string; name: string; spend: number; clicks: number;
-      ctr: number; cpc: number; revenue: number; roas: number;
-    }[] = [];
+    const campMap = new Map<
+      string,
+      { id: string; name: string; spend: number; clicks: number; impressions: number; revenue: number }
+    >();
 
-    const insightResults = await Promise.all(
-      (campRes.data ?? []).map(async (c) => {
-        try {
-          const r = await oaiAds<{ data: InsightRow[] }>(
-            creds.apiKey,
-            `/campaigns/${encodeURIComponent(c.id)}/insights?time_granularity=daily&limit=${data.days}`,
-          );
-          return { c, rows: r.data ?? [], error: null as null | unknown };
-        } catch (error) {
-          if (isRecoverableAdsAuthError(error)) return { c, rows: [], error };
-          throw error;
-        }
-      }),
-    );
+    for (const row of insightsRes.data ?? []) {
+      const date = (row.readable_time ?? "").slice(0, 10);
+      const spend = Number(row.spend ?? 0);
+      const clicks = Number(row.clicks ?? 0);
+      const impressions = Number(row.impressions ?? 0);
+      const id = row.campaign_id ?? "unknown";
+      const name = row.campaign_name ?? id;
 
-    for (const { c, rows } of insightResults) {
-      let cSpend = 0, cClicks = 0, cImpr = 0, cRev = 0;
-      for (const row of rows) {
-        const date = (row.date ?? row.start_date ?? "").slice(0, 10);
-        const spend = Number(row.spend ?? 0);
-        const revenue = Number(row.revenue ?? 0);
-        const clicks = Number(row.clicks ?? 0);
-        const impressions = Number(row.impressions ?? 0);
-        cSpend += spend; cClicks += clicks; cImpr += impressions; cRev += revenue;
-        if (date && date >= startKey) {
-          const cur = byDate.get(date) ?? { spend: 0, revenue: 0, clicks: 0 };
-          cur.spend += spend; cur.revenue += revenue; cur.clicks += clicks;
-          byDate.set(date, cur);
-        }
+      if (date) {
+        const cur = byDate.get(date) ?? { spend: 0, revenue: 0, clicks: 0 };
+        cur.spend += spend;
+        cur.clicks += clicks;
+        byDate.set(date, cur);
       }
-      campaigns.push({
-        id: c.id,
-        name: c.name,
-        spend: cSpend,
-        clicks: cClicks,
-        ctr: cImpr ? (cClicks / cImpr) * 100 : 0,
-        cpc: cClicks ? cSpend / cClicks : 0,
-        revenue: cRev,
-        roas: cSpend ? cRev / cSpend : 0,
-      });
+      const c = campMap.get(id) ?? { id, name, spend: 0, clicks: 0, impressions: 0, revenue: 0 };
+      c.spend += spend;
+      c.clicks += clicks;
+      c.impressions += impressions;
+      campMap.set(id, c);
     }
+
+    const campaigns = Array.from(campMap.values()).map((c) => ({
+      id: c.id,
+      name: c.name,
+      spend: c.spend,
+      clicks: c.clicks,
+      ctr: c.impressions ? (c.clicks / c.impressions) * 100 : 0,
+      cpc: c.clicks ? c.spend / c.clicks : 0,
+      revenue: 0,
+      roas: 0,
+    }));
 
     const series: { date: string; spend: number; revenue: number; clicks: number }[] = [];
     for (let i = data.days - 1; i >= 0; i--) {
