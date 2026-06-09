@@ -171,6 +171,7 @@ function CampaignBuilderPage() {
       productDescription,
       monthlyBudget: budget,
       targetAudience,
+      campaignName: campaignNameInput || undefined,
     });
   }
 
