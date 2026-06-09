@@ -365,6 +365,14 @@ function CampaignBuilderPage() {
                       </Badge>
                     ))}
                   </div>
+                  {hints.length > 10 && (
+                    <p className="text-sm font-medium text-destructive">
+                      OpenAI Ads allows max 10 context hints. Remove {hints.length - 10} before creating.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {Math.min(hints.length, 10)}/10 hints added
+                  </p>
                   <form
                     className="flex gap-2"
                     onSubmit={(e) => {
