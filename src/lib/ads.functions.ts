@@ -702,7 +702,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         method: "POST",
         body: JSON.stringify({
           name: data.campaignName,
-          status: "PAUSED",
+          status: "paused",
           budget: data.lifetimeBudgetMicros,
         }),
       });
@@ -712,7 +712,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         body: JSON.stringify({
           campaign_id: campaign.id,
           name: `${data.campaignName} - AG1`,
-          status: "PAUSED",
+          status: "paused",
           context_hints: data.contextHints,
         }),
       });
@@ -722,7 +722,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         body: JSON.stringify({
           ad_group_id: adGroup.id,
           name: `${data.campaignName} - Ad1`,
-          status: "PAUSED",
+          status: "paused",
           creative: {
             headline: data.headline,
             body: data.body,
