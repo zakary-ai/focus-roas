@@ -231,24 +231,48 @@ export function CampaignDetailSheet({
                 {data.adGroups.map((g) => {
                   const groupAds = data.ads.filter((a) => a.adGroupId === g.id);
                   return (
-                    <div key={g.id} className="space-y-2 rounded-md border p-3">
-                      <div className="text-sm font-medium">{g.name}</div>
-                      {g.contextHints.length > 0 && (
-                        <div>
-                          <div className="mb-1 text-xs text-muted-foreground">Context hints</div>
+                    <div key={g.id} className="space-y-4 rounded-md border p-4">
+                      <div className="text-sm font-semibold">{g.name}</div>
+
+                      <div>
+                        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Context hints
+                        </div>
+                        {g.contextHints.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5">
                             {g.contextHints.map((h, i) => (
-                              <Badge key={i} variant="secondary" className="font-normal">{h}</Badge>
+                              <Badge key={i} variant="secondary" className="font-normal">
+                                {h}
+                              </Badge>
                             ))}
                           </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">None</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Ads
                         </div>
-                      )}
-                      {groupAds.map((a) => (
-                        <div key={a.id} className="rounded bg-muted/40 p-2 text-sm">
-                          <div className="font-medium">{a.headline || "(no headline)"}</div>
-                          <div className="text-muted-foreground">{a.body || "(no body)"}</div>
-                        </div>
-                      ))}
+                        {groupAds.length === 0 && (
+                          <p className="text-sm text-muted-foreground">No ads in this group.</p>
+                        )}
+                        {groupAds.map((a) => (
+                          <div key={a.id} className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
+                            <div className="text-xs text-muted-foreground">{a.name}</div>
+                            <AdField label="Headline" value={a.headline} />
+                            <AdField label="Body" value={a.body} />
+                            {a.destinationUrl && (
+                              <AdField
+                                label="Destination"
+                                value={a.destinationUrl}
+                                mono
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })}
