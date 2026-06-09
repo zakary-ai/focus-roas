@@ -282,9 +282,10 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
     const checklist = (settings?.conversion_checklist as Record<string, boolean>) ?? {};
     const conversionsConfigured = Object.values(checklist).filter(Boolean).length >= 3;
 
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - (data.days - 1));
+    const now = new Date();
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+    const start = new Date(end);
+    start.setUTCDate(end.getUTCDate() - (data.days - 1));
     const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
     type InsightRow = {
