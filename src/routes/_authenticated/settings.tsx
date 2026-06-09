@@ -36,16 +36,26 @@ function SettingsPage() {
 
   const { data: settings, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
   const [newKey, setNewKey] = useState("");
+  const [newAcct, setNewAcct] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
 
-  useEffect(() => { if (settings?.storeUrl) setStoreUrl(settings.storeUrl); }, [settings]);
+  useEffect(() => {
+    if (settings?.storeUrl) setStoreUrl(settings.storeUrl);
+    if (settings?.adAccountId) setNewAcct(settings.adAccountId);
+  }, [settings]);
 
   async function updateKey() {
-    if (!newKey.trim()) return;
-    await verifyFn({ data: { apiKey: newKey.trim() } });
-    setNewKey("");
-    await refetch();
-    toast.success("API key updated");
+    if (!newKey.trim()) return toast.error("Enter the new API key");
+    if (!/^adacct_[A-Za-z0-9]{6,}$/.test(newAcct.trim()))
+      return toast.error("Enter a valid ad account ID (adacct_xxxxxxxxx)");
+    try {
+      await verifyFn({ data: { apiKey: newKey.trim(), adAccountId: newAcct.trim() } });
+      setNewKey("");
+      await refetch();
+      toast.success("API key updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update");
+    }
   }
 
   async function saveStore() {
@@ -82,8 +92,17 @@ function SettingsPage() {
               </div>
               <div className="flex gap-2">
                 <Input id="newkey" type="password" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="sk-ads-..." />
-                <Button onClick={updateKey} disabled={!newKey.trim()}>Update</Button>
               </div>
+              <div className="mt-2">
+                <Label htmlFor="newacct">Ad Account ID</Label>
+                <Input
+                  id="newacct"
+                  value={newAcct}
+                  onChange={(e) => setNewAcct(e.target.value)}
+                  placeholder="adacct_xxxxxxxxx"
+                />
+              </div>
+              <Button className="mt-3" onClick={updateKey} disabled={!newKey.trim()}>Update</Button>
             </div>
           </CardContent>
         </Card>
