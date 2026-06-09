@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,7 +74,12 @@ function SettingsPage() {
               <Input readOnly value={settings?.apiKeyMasked ?? "Not connected"} className="font-mono" />
             </div>
             <div>
-              <Label htmlFor="newkey">Replace with new key</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="newkey">Replace with new key</Label>
+                <Link to="/help/api-key" target="_blank" className="text-xs font-medium text-primary hover:underline">
+                  Where do I find this?
+                </Link>
+              </div>
               <div className="flex gap-2">
                 <Input id="newkey" type="password" value={newKey} onChange={(e) => setNewKey(e.target.value)} placeholder="sk-ads-..." />
                 <Button onClick={updateKey} disabled={!newKey.trim()}>Update</Button>
