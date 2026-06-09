@@ -493,13 +493,64 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
     type AdGroupRaw = {
       id: string;
       name?: string;
-      context_hints?: string[];
+      context_hints?: string[] | string;
+      contextHints?: string[] | string;
     };
     type AdRaw = {
       id: string;
       name?: string;
-      creative?: { headline?: string; body?: string; destination_url?: string };
+      creative?: {
+        headline?: string;
+        title?: string;
+        headlines?: string[];
+        body?: string;
+        body_text?: string;
+        description?: string;
+        bodies?: string[];
+        destination_url?: string;
+        url?: string;
+      };
+      headline?: string;
+      body?: string;
+      destination_url?: string;
     };
+
+    const normalizeHints = (raw: unknown): string[] => {
+      if (!raw) return [];
+      const arr = Array.isArray(raw)
+        ? raw.flatMap((x) => String(x).split(/[,\n]+/))
+        : String(raw).split(/[,\n]+/);
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const item of arr) {
+        const t = item.trim().replace(/[.;]+$/, "");
+        if (!t) continue;
+        const key = t.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(t);
+      }
+      return out;
+    };
+
+    const pickHeadline = (a: AdRaw): string =>
+      a.creative?.headline ??
+      a.creative?.title ??
+      a.creative?.headlines?.[0] ??
+      a.headline ??
+      a.name ??
+      "";
+
+    const pickBody = (a: AdRaw): string =>
+      a.creative?.body ??
+      a.creative?.body_text ??
+      a.creative?.description ??
+      a.creative?.bodies?.[0] ??
+      a.body ??
+      "";
+
+    const pickDestUrl = (a: AdRaw): string =>
+      a.creative?.destination_url ?? a.creative?.url ?? a.destination_url ?? "";
 
     try {
       const campRes = await oaiAds<CampaignRaw | { data: CampaignRaw }>(
@@ -584,7 +635,7 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
         adGroups = (agRes.data ?? []).map((g) => ({
           id: g.id,
           name: g.name ?? g.id,
-          contextHints: Array.isArray(g.context_hints) ? g.context_hints : [],
+          contextHints: normalizeHints(g.context_hints ?? g.contextHints),
         }));
 
         for (const g of adGroups) {
@@ -597,9 +648,9 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
               ads.push({
                 id: a.id,
                 name: a.name ?? a.id,
-                headline: a.creative?.headline ?? "",
-                body: a.creative?.body ?? "",
-                destinationUrl: a.creative?.destination_url ?? "",
+                headline: pickHeadline(a),
+                body: pickBody(a),
+                destinationUrl: pickDestUrl(a),
                 adGroupId: g.id,
               });
             }
