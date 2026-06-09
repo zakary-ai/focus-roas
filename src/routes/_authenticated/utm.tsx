@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
@@ -63,6 +63,27 @@ function CampaignBuilderPage() {
   const [newHint, setNewHint] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [remoteCampaignId, setRemoteCampaignId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("campaignBuilderPrefill");
+      if (!raw) return;
+      sessionStorage.removeItem("campaignBuilderPrefill");
+      const p = JSON.parse(raw) as {
+        campaignName?: string;
+        contextHints?: string[];
+        monthlyBudget?: number | null;
+      };
+      if (p.campaignName) setCampaignNameInput(p.campaignName);
+      if (Array.isArray(p.contextHints)) setHints(p.contextHints.slice(0, 10));
+      if (typeof p.monthlyBudget === "number" && p.monthlyBudget > 0) {
+        setMonthlyBudget(String(p.monthlyBudget));
+      }
+      toast.success("Prefilled from existing campaign");
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const { data: history } = useQuery({
     queryKey: ["campaign-builds"],
