@@ -1,11 +1,19 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AreaChart,
   Area,
@@ -24,7 +32,7 @@ const fmtMoney = (n: number) =>
 
 export function CampaignDetailSheet({
   campaignId,
-  days,
+  days: initialDays,
   shopifyConnected,
   onClose,
 }: {
@@ -37,6 +45,11 @@ export function CampaignDetailSheet({
   const navigate = useNavigate();
   const detailsFn = useServerFn(getCampaignDetails);
   const statusFn = useServerFn(updateCampaignStatus);
+  const [days, setDays] = useState(initialDays);
+
+  useEffect(() => {
+    setDays(initialDays);
+  }, [initialDays, campaignId]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["campaign-details", campaignId, days],
@@ -154,8 +167,19 @@ export function CampaignDetailSheet({
 
             {/* Performance */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Performance (last {days} days)</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Performance</CardTitle>
+                <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
+                  <SelectTrigger className="h-8 w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="14">Last 14 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

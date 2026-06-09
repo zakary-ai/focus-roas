@@ -485,6 +485,7 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
     };
     type InsightRow = {
       readable_time?: string;
+      campaign_id?: string;
       spend?: number | string;
       clicks?: number | string;
       impressions?: number | string;
@@ -507,7 +508,7 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
       );
       const campaign = ("data" in (campRes as any) ? (campRes as any).data : campRes) as CampaignRaw;
 
-      const insightFields = ["readable_time", "clicks", "impressions", "spend"];
+      const insightFields = ["readable_time", "campaign_id", "clicks", "impressions", "spend"];
       let insightsRes: { data: InsightRow[] } | null = null;
       let end: Date | null = null;
       for (let endOffsetDays = 1; endOffsetDays <= 7; endOffsetDays++) {
@@ -517,7 +518,6 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
         const params = new URLSearchParams();
         params.append("time_granularity", "daily");
         params.append("aggregation_level", "campaign");
-        params.append("campaign_ids[]", data.id);
         for (const f of insightFields) params.append("fields[]", f);
         params.append(
           "time_ranges[]",
@@ -547,6 +547,7 @@ export const getCampaignDetails = createServerFn({ method: "POST" })
 
       const byDate = new Map<string, { spend: number; clicks: number; impressions: number }>();
       for (const row of insightsRes?.data ?? []) {
+        if ((row.campaign_id ?? "") !== data.id) continue;
         const date = (row.readable_time ?? "").slice(0, 10);
         if (!date) continue;
         const cur = byDate.get(date) ?? { spend: 0, clicks: 0, impressions: 0 };
