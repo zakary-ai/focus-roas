@@ -896,6 +896,7 @@ export const listCampaignBuilds = createServerFn({ method: "GET" })
 const CreateRemoteInput = z.object({
   campaignName: z.string().min(1).max(200),
   lifetimeBudgetMicros: z.number().int().positive(),
+  maxCpcBidMicros: z.number().int().positive(),
   headline: z.string().min(1).max(200),
   body: z.string().min(1).max(500),
   destinationUrl: z.string().url().max(1000),
@@ -917,6 +918,9 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           status: "paused",
           budget: {
             lifetime_spend_limit_micros: data.lifetimeBudgetMicros,
+          },
+          bidding_config: {
+            max_cpc_bid_micro_currency: data.maxCpcBidMicros,
           },
         }),
       });
