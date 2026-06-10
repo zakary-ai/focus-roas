@@ -991,8 +991,9 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           name: `${data.campaignName} - AG1`,
           status: "paused",
           context_hints: data.contextHints,
-          bid: {
-            max_cpc_bid_micro_currency: data.maxCpcBidMicros,
+          bidding_config: {
+            billing_event_type: "impression",
+            max_bid_micros: data.maxCpcBidMicros,
           },
         }),
       });
