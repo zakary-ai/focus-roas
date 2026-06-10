@@ -981,9 +981,6 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           budget: {
             lifetime_spend_limit_micros: data.lifetimeBudgetMicros,
           },
-          bidding_config: {
-            max_cpc_bid_micro_currency: data.maxCpcBidMicros,
-          },
         }),
       });
 
@@ -994,6 +991,9 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           name: `${data.campaignName} - AG1`,
           status: "paused",
           context_hints: data.contextHints,
+          bid: {
+            max_cpc_bid_micro_currency: data.maxCpcBidMicros,
+          },
         }),
       });
 
