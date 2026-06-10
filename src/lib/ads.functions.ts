@@ -1071,7 +1071,6 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
             billing_event_type: "click",
             max_bid_micros: data.maxCpcBidMicros,
           },
-          conversion_event: "order_created",
         }),
       });
 
