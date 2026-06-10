@@ -493,7 +493,7 @@ function CampaignBuilderPage() {
                     ))}
                   </ol>
 
-                  <div className="mt-6 flex gap-3">
+                  <div className="mt-6 flex flex-wrap items-end gap-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="maxcpc">Max CPC bid ($)</Label>
                       <Input
@@ -509,22 +509,47 @@ function CampaignBuilderPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="adimage">Ad image</Label>
-                      <Input
-                        id="adimage"
-                        type="file"
-                        accept="image/*"
-                        className="w-56"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleImagePick(f);
-                        }}
-                      />
+                      <div className="flex items-center gap-2">
+                        {adImagePreview ? (
+                          <img
+                            src={adImagePreview}
+                            alt="Ad preview"
+                            className="h-10 w-10 rounded-md border border-border object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-md border border-dashed border-border bg-muted text-muted-foreground">
+                            <ImageIcon className="h-4 w-4" />
+                          </div>
+                        )}
+                        <input
+                          id="adimage"
+                          type="file"
+                          accept="image/png,image/jpeg"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleImagePick(f);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById("adimage")?.click()}
+                          disabled={upload.isPending}
+                        >
+                          <Upload className="h-4 w-4" />
+                          {upload.isPending
+                            ? "Uploading…"
+                            : adImageFileId
+                              ? "Replace image"
+                              : "Upload image"}
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        {upload.isPending
-                          ? "Uploading…"
-                          : adImageFileId
-                            ? `Uploaded: ${adImageName ?? "image"}`
-                            : "Required by OpenAI Ads"}
+                        {adImageFileId && adImageName
+                          ? `Uploaded: ${adImageName}`
+                          : "PNG or JPEG, square, min 256×256px"}
                       </p>
                     </div>
                     <Button variant="outline" onClick={saveDraft}>Save draft</Button>
