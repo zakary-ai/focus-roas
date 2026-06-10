@@ -22,7 +22,7 @@ export function ShopifyWebhookCard() {
   async function copy() {
     if (!webhookUrl) return;
     try {
-      await navigator.clipboard.writeText(webhookUrl);
+      await navigator.clipboard.writeText(webhookUrl.trim());
       setCopied(true);
       toast.success("Webhook URL copied");
       setTimeout(() => setCopied(false), 1500);
