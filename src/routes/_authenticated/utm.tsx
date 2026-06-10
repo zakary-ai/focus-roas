@@ -437,7 +437,28 @@ function CampaignBuilderPage() {
                     </RadioGroup>
                   </div>
                   <div>
-                    <Label className="mb-2 block">Body copy</Label>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Body copy</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        disabled={regenerate.isPending || !productName || !productUrl || !productDescription || !targetAudience || !monthlyBudget}
+                        onClick={() => {
+                          regenerate.mutate({
+                            productName,
+                            productUrl,
+                            productDescription,
+                            monthlyBudget: Number(monthlyBudget),
+                            targetAudience,
+                          });
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Regenerate
+                      </Button>
+                    </div>
                     <RadioGroup
                       value={String(selectedBodyIdx)}
                       onValueChange={(v) => setSelectedBodyIdx(Number(v))}
