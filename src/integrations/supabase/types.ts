@@ -74,6 +74,48 @@ export type Database = {
         }
         Relationships: []
       }
+      conversions: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          landing_site: string | null
+          revenue_cents: number
+          shopify_order_id: string
+          user_id: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          landing_site?: string | null
+          revenue_cents?: number
+          shopify_order_id: string
+          user_id: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          landing_site?: string | null
+          revenue_cents?: number
+          shopify_order_id?: string
+          user_id?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           connected_account_name: string | null
@@ -82,6 +124,9 @@ export type Database = {
           onboarding_completed: boolean
           openai_ad_account_id: string | null
           openai_ads_api_key: string | null
+          shopify_access_token: string | null
+          shopify_domain: string | null
+          shopify_webhook_secret: string | null
           store_url: string | null
           updated_at: string
           user_id: string
@@ -93,6 +138,9 @@ export type Database = {
           onboarding_completed?: boolean
           openai_ad_account_id?: string | null
           openai_ads_api_key?: string | null
+          shopify_access_token?: string | null
+          shopify_domain?: string | null
+          shopify_webhook_secret?: string | null
           store_url?: string | null
           updated_at?: string
           user_id: string
@@ -104,6 +152,9 @@ export type Database = {
           onboarding_completed?: boolean
           openai_ad_account_id?: string | null
           openai_ads_api_key?: string | null
+          shopify_access_token?: string | null
+          shopify_domain?: string | null
+          shopify_webhook_secret?: string | null
           store_url?: string | null
           updated_at?: string
           user_id?: string
