@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Copy, Check } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +22,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getSettings, verifyApiKey, updateStoreUrl, deleteAccountData } from "@/lib/ads.functions";
-import { getShopifyStatus, startShopifyOAuth, disconnectShopify } from "@/lib/shopify.functions";
+import { ShopifyWebhookCard } from "@/components/shopify-webhook-card";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -34,19 +35,10 @@ function SettingsPage() {
   const verifyFn = useServerFn(verifyApiKey);
   const storeFn = useServerFn(updateStoreUrl);
   const deleteFn = useServerFn(deleteAccountData);
-  const shopifyStatusFn = useServerFn(getShopifyStatus);
-  const shopifyConnectFn = useServerFn(startShopifyOAuth);
-  const shopifyDisconnectFn = useServerFn(disconnectShopify);
 
   const { data: settings, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
-  const { data: shopify, refetch: refetchShopify } = useQuery({
-    queryKey: ["shopify-status"],
-    queryFn: () => shopifyStatusFn(),
-  });
   const [newKey, setNewKey] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
-  const [shopDomain, setShopDomain] = useState("");
-  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     if (settings?.storeUrl) setStoreUrl(settings.storeUrl);
@@ -73,35 +65,6 @@ function SettingsPage() {
     await storeFn({ data: { storeUrl } });
     toast.success("Store URL saved");
     await refetch();
-  }
-
-  async function connectShop() {
-    if (!shopDomain.trim()) return toast.error("Enter your store domain");
-    setConnecting(true);
-    try {
-      const res = await shopifyConnectFn({
-        data: { domain: shopDomain.trim(), origin: window.location.origin },
-      });
-      if (!res.ok) {
-        toast.error(res.errorMessage);
-        return;
-      }
-      // Open in a new tab — the preview iframe can't navigate the top window,
-      // and Shopify refuses to render inside iframes anyway.
-      const win = window.open(res.authUrl, "_blank", "noopener");
-      if (!win) {
-        toast.error("Pop-up blocked — allow pop-ups for this site and try again.");
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not connect");
-      setConnecting(false);
-    }
-  }
-
-  async function disconnectShop() {
-    await shopifyDisconnectFn();
-    toast.success("Shopify disconnected");
-    await refetchShopify();
   }
 
   async function deleteEverything() {
@@ -160,36 +123,7 @@ function SettingsPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Shopify connection</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {shopify?.connected ? (
-              <>
-                <div>
-                  <Label>Connected store</Label>
-                  <Input readOnly value={shopify.domain ?? ""} />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Orders are syncing automatically. Revenue and ROAS will populate on your dashboard.
-                </p>
-                <Button variant="outline" onClick={disconnectShop}>Disconnect</Button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Click connect and approve the permissions in your Shopify admin. We'll handle the rest.
-                </p>
-                <div>
-                  <Label htmlFor="shop-domain">Store domain</Label>
-                  <Input
-                    id="shop-domain"
-                    placeholder="mystore.myshopify.com"
-                    value={shopDomain}
-                    onChange={(e) => setShopDomain(e.target.value)}
-                  />
-                </div>
-                <Button onClick={connectShop} disabled={connecting}>
-                  {connecting ? "Connecting..." : "Connect Shopify"}
-                </Button>
-              </>
-            )}
+            <ShopifyWebhookCard />
           </CardContent>
         </Card>
 
