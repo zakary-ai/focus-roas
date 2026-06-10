@@ -74,12 +74,17 @@ export const startShopifyOAuth = createServerFn({ method: "POST" })
     const { createHmac, randomBytes } = await import("crypto");
     const nonce = randomBytes(16).toString("hex");
     const ts = Date.now().toString();
-    const payload = `${userId}.${nonce}.${ts}`;
+    const origin = data.origin.replace(/\/$/, "");
+    const originB64 = Buffer.from(origin, "utf8").toString("base64url");
+    const payload = `${userId}.${nonce}.${ts}.${originB64}`;
     const sig = createHmac("sha256", clientSecret).update(payload).digest("hex");
     const state = `${Buffer.from(payload).toString("base64url")}.${sig}`;
 
-    const origin = data.origin.replace(/\/$/, "");
-    const redirectUri = `${origin}/api/public/shopify-oauth/callback`;
+    const supabaseUrl = (process.env.SUPABASE_URL ?? "").replace(/\/$/, "");
+    if (!supabaseUrl) {
+      return { ok: false as const, errorMessage: "SUPABASE_URL is not configured." };
+    }
+    const redirectUri = `${supabaseUrl}/functions/v1/shopify-oauth-callback`;
     const scopes = "read_orders,read_analytics";
 
     const authUrl =
