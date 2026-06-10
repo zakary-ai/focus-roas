@@ -366,6 +366,30 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       throw new Error("Could not fetch dashboard insights right now.");
     }
 
+    // Pull conversions for the date window so we can attribute revenue
+    const windowStart = new Date(end);
+    windowStart.setUTCDate(end.getUTCDate() - (data.days - 1));
+    const { data: convRows } = await supabase
+      .from("conversions")
+      .select("campaign_id, utm_campaign, revenue_cents, created_at")
+      .eq("user_id", userId)
+      .gte("created_at", windowStart.toISOString());
+
+    const revenueByDate = new Map<string, number>();
+    const revenueByCampaignId = new Map<string, number>();
+    const revenueByCampaignName = new Map<string, number>();
+    for (const r of convRows ?? []) {
+      const dateKey = (r.created_at as string).slice(0, 10);
+      const rev = Number(r.revenue_cents ?? 0) / 100;
+      revenueByDate.set(dateKey, (revenueByDate.get(dateKey) ?? 0) + rev);
+      if (r.campaign_id) {
+        revenueByCampaignId.set(r.campaign_id as string, (revenueByCampaignId.get(r.campaign_id as string) ?? 0) + rev);
+      }
+      if (r.utm_campaign) {
+        revenueByCampaignName.set(r.utm_campaign as string, (revenueByCampaignName.get(r.utm_campaign as string) ?? 0) + rev);
+      }
+    }
+
     const byDate = new Map<string, { spend: number; revenue: number; clicks: number }>();
     const campMap = new Map<
       string,
@@ -393,16 +417,20 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       campMap.set(id, c);
     }
 
-    const campaigns = Array.from(campMap.values()).map((c) => ({
-      id: c.id,
-      name: c.name,
-      spend: c.spend,
-      clicks: c.clicks,
-      ctr: c.impressions ? (c.clicks / c.impressions) * 100 : 0,
-      cpc: c.clicks ? c.spend / c.clicks : 0,
-      revenue: 0,
-      roas: 0,
-    }));
+    const campaigns = Array.from(campMap.values()).map((c) => {
+      const revenue =
+        (revenueByCampaignId.get(c.id) ?? 0) + (revenueByCampaignName.get(c.name) ?? 0);
+      return {
+        id: c.id,
+        name: c.name,
+        spend: c.spend,
+        clicks: c.clicks,
+        ctr: c.impressions ? (c.clicks / c.impressions) * 100 : 0,
+        cpc: c.clicks ? c.spend / c.clicks : 0,
+        revenue,
+        roas: c.spend ? revenue / c.spend : 0,
+      };
+    });
 
     const series: { date: string; spend: number; revenue: number; clicks: number }[] = [];
     for (let i = data.days - 1; i >= 0; i--) {
@@ -410,7 +438,7 @@ export const getDashboardMetrics = createServerFn({ method: "POST" })
       d.setUTCDate(end.getUTCDate() - i);
       const key = isoUtcDay(d);
       const row = byDate.get(key) ?? { spend: 0, revenue: 0, clicks: 0 };
-      series.push({ date: key, ...row });
+      series.push({ date: key, ...row, revenue: revenueByDate.get(key) ?? 0 });
     }
     const totals = series.reduce(
       (a, s) => ({
