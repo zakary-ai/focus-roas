@@ -811,7 +811,8 @@ export const buildCampaign = createServerFn({ method: "POST" })
 
     const systemPrompt =
       "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. HARD LIMITS (non-negotiable): every headline must be 30 characters or fewer (count every character including spaces); every body/description must be 65 characters or fewer. Count carefully before responding and rewrite anything over the limit. Context hints are specific multi-word conversational phrases describing the kinds of ChatGPT conversations where this ad should appear — buyer intents, use-cases, buyer personas, product variants, and purchase contexts. Each hint is a short phrase (3-8 words), lowercased, no punctuation. Aim for 12-18 hints covering a wide range of intents: bulk/wholesale, specific use-cases (industry, profession, environment), product variants/specs, and price/quality angles.";
-    const userPrompt = `Generate ad copy for this product.
+    const userPrompt = `Generate 3 headline options and 3 body copy options for a ChatGPT ad. Rules: Headlines must be under 30 characters, direct, and product-first (example: 'Blue Nitrile Gloves - 1,000/Case'). Body copy must be under 65 characters, one or two short punchy sentences, no fluff (example: 'Powder-free nitrile gloves for industrial use. Bulk pricing.'). Do NOT use adjectives like 'superior', 'premium', 'trusted', or 'reliable'. Lead with the product and quantity or use case, then the key benefit. Less is more.
+
 Product: ${data.productName}
 Description: ${data.productDescription}
 Target audience: ${data.targetAudience}
