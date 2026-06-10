@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getSettings, verifyApiKey, updateStoreUrl, deleteAccountData } from "@/lib/ads.functions";
+import { getShopifyStatus, connectShopify, disconnectShopify } from "@/lib/shopify.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -33,10 +34,20 @@ function SettingsPage() {
   const verifyFn = useServerFn(verifyApiKey);
   const storeFn = useServerFn(updateStoreUrl);
   const deleteFn = useServerFn(deleteAccountData);
+  const shopifyStatusFn = useServerFn(getShopifyStatus);
+  const shopifyConnectFn = useServerFn(connectShopify);
+  const shopifyDisconnectFn = useServerFn(disconnectShopify);
 
   const { data: settings, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
+  const { data: shopify, refetch: refetchShopify } = useQuery({
+    queryKey: ["shopify-status"],
+    queryFn: () => shopifyStatusFn(),
+  });
   const [newKey, setNewKey] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
+  const [shopDomain, setShopDomain] = useState("");
+  const [shopToken, setShopToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     if (settings?.storeUrl) setStoreUrl(settings.storeUrl);
@@ -63,6 +74,35 @@ function SettingsPage() {
     await storeFn({ data: { storeUrl } });
     toast.success("Store URL saved");
     await refetch();
+  }
+
+  async function connectShop() {
+    if (!shopDomain.trim() || !shopToken.trim()) {
+      return toast.error("Enter store domain and access token");
+    }
+    setConnecting(true);
+    try {
+      const res = await shopifyConnectFn({
+        data: { domain: shopDomain.trim(), accessToken: shopToken.trim() },
+      });
+      if (!res.ok) {
+        toast.error(res.errorMessage);
+        return;
+      }
+      toast.success(`Connected to ${res.shopName}`);
+      setShopToken("");
+      await refetchShopify();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not connect");
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function disconnectShop() {
+    await shopifyDisconnectFn();
+    toast.success("Shopify disconnected");
+    await refetchShopify();
   }
 
   async function deleteEverything() {
@@ -115,6 +155,61 @@ function SettingsPage() {
               <Input id="store" value={storeUrl} onChange={(e) => setStoreUrl(e.target.value)} />
             </div>
             <Button onClick={saveStore}>Save</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Shopify connection</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {shopify?.connected ? (
+              <>
+                <div>
+                  <Label>Connected store</Label>
+                  <Input readOnly value={shopify.domain ?? ""} />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Orders are syncing automatically. Revenue and ROAS will populate on your dashboard.
+                </p>
+                <Button variant="outline" onClick={disconnectShop}>Disconnect</Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Connect your Shopify store to track real revenue and ROAS per campaign.
+                </p>
+                <details className="rounded-md border p-3 text-sm">
+                  <summary className="cursor-pointer font-medium">How to get your access token</summary>
+                  <ol className="ml-4 mt-2 list-decimal space-y-1 text-muted-foreground">
+                    <li>In Shopify admin: <strong>Settings → Apps and sales channels → Develop apps</strong></li>
+                    <li>Click <strong>Create an app</strong>, name it (e.g. "Lovable Tracking")</li>
+                    <li>Click <strong>Configure Admin API scopes</strong> and enable <code>read_orders</code> and <code>write_webhooks</code></li>
+                    <li>Click <strong>Install app</strong>, then copy the <strong>Admin API access token</strong> (starts with <code>shpat_</code>)</li>
+                  </ol>
+                </details>
+                <div>
+                  <Label htmlFor="shop-domain">Store domain</Label>
+                  <Input
+                    id="shop-domain"
+                    placeholder="mystore.myshopify.com"
+                    value={shopDomain}
+                    onChange={(e) => setShopDomain(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="shop-token">Admin API access token</Label>
+                  <Input
+                    id="shop-token"
+                    type="password"
+                    placeholder="shpat_..."
+                    value={shopToken}
+                    onChange={(e) => setShopToken(e.target.value)}
+                  />
+                </div>
+                <Button onClick={connectShop} disabled={connecting}>
+                  {connecting ? "Connecting..." : "Connect Shopify"}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
