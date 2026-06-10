@@ -194,6 +194,7 @@ function CampaignBuilderPage() {
       body: string;
       destinationUrl: string;
       contextHints: string[];
+      fileId: string;
     }) => createRemoteFn({ data: input }),
     onSuccess: (r) => {
       setRemoteCampaignId(r.campaignId);
