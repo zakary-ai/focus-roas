@@ -80,6 +80,9 @@ function CampaignBuilderPage() {
       if (typeof p.monthlyBudget === "number" && p.monthlyBudget > 0) {
         setMonthlyBudget(String(p.monthlyBudget));
       }
+      if (typeof p.productDescription === "string" && p.productDescription) {
+        setProductDescription(p.productDescription);
+      }
       toast.success("Prefilled from existing campaign");
     } catch {
       // ignore
