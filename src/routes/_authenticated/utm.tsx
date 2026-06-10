@@ -61,6 +61,8 @@ function CampaignBuilderPage() {
   const [result, setResult] = useState<BuildResult | null>(null);
   const [selectedHeadlineIdx, setSelectedHeadlineIdx] = useState(0);
   const [selectedBodyIdx, setSelectedBodyIdx] = useState(0);
+  const [customHeadline, setCustomHeadline] = useState("");
+  const [customBody, setCustomBody] = useState("");
   const [hints, setHints] = useState<string[]>([]);
   const [newHint, setNewHint] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
@@ -220,8 +222,12 @@ function CampaignBuilderPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const selectedHeadline = result?.headlines[selectedHeadlineIdx] ?? "";
-  const selectedBody = result?.bodies[selectedBodyIdx] ?? "";
+  const selectedHeadline =
+    selectedHeadlineIdx === -1
+      ? customHeadline
+      : result?.headlines[selectedHeadlineIdx] ?? "";
+  const selectedBody =
+    selectedBodyIdx === -1 ? customBody : result?.bodies[selectedBodyIdx] ?? "";
 
   const steps = useMemo(() => {
     if (!result) return [] as { key: string; label: React.ReactNode }[];
@@ -368,6 +374,24 @@ function CampaignBuilderPage() {
                           <CopyButton text={h} />
                         </div>
                       ))}
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="-1" id="h-custom" />
+                          <label htmlFor="h-custom" className="flex-1 text-sm font-medium">
+                            Write your own
+                          </label>
+                          <span className={`text-xs ${customHeadline.length > 30 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {customHeadline.length}/30
+                          </span>
+                        </div>
+                        <Input
+                          placeholder="Your headline (max 30 chars)"
+                          maxLength={30}
+                          value={customHeadline}
+                          onFocus={() => setSelectedHeadlineIdx(-1)}
+                          onChange={(e) => setCustomHeadline(e.target.value)}
+                        />
+                      </div>
                     </RadioGroup>
                   </div>
                   <div>
@@ -384,6 +408,25 @@ function CampaignBuilderPage() {
                           <CopyButton text={b} />
                         </div>
                       ))}
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="-1" id="b-custom" />
+                          <label htmlFor="b-custom" className="flex-1 text-sm font-medium">
+                            Write your own
+                          </label>
+                          <span className={`text-xs ${customBody.length > 65 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {customBody.length}/65
+                          </span>
+                        </div>
+                        <Textarea
+                          placeholder="Your body copy (max 65 chars)"
+                          maxLength={65}
+                          rows={2}
+                          value={customBody}
+                          onFocus={() => setSelectedBodyIdx(-1)}
+                          onChange={(e) => setCustomBody(e.target.value)}
+                        />
+                      </div>
                     </RadioGroup>
                   </div>
 
