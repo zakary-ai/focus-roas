@@ -61,6 +61,8 @@ function CampaignBuilderPage() {
   const [result, setResult] = useState<BuildResult | null>(null);
   const [selectedHeadlineIdx, setSelectedHeadlineIdx] = useState(0);
   const [selectedBodyIdx, setSelectedBodyIdx] = useState(0);
+  const [customHeadline, setCustomHeadline] = useState("");
+  const [customBody, setCustomBody] = useState("");
   const [hints, setHints] = useState<string[]>([]);
   const [newHint, setNewHint] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
@@ -220,8 +222,12 @@ function CampaignBuilderPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const selectedHeadline = result?.headlines[selectedHeadlineIdx] ?? "";
-  const selectedBody = result?.bodies[selectedBodyIdx] ?? "";
+  const selectedHeadline =
+    selectedHeadlineIdx === -1
+      ? customHeadline
+      : result?.headlines[selectedHeadlineIdx] ?? "";
+  const selectedBody =
+    selectedBodyIdx === -1 ? customBody : result?.bodies[selectedBodyIdx] ?? "";
 
   const steps = useMemo(() => {
     if (!result) return [] as { key: string; label: React.ReactNode }[];
