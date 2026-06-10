@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 function normalizeDomain(input: string): string {
   let v = input.trim().toLowerCase();
   v = v.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (!v.includes(".")) v = `${v}.myshopify.com`;
   return v;
 }
 
@@ -41,85 +42,54 @@ export const getShopifyStatus = createServerFn({ method: "GET" })
     };
   });
 
-export const connectShopify = createServerFn({ method: "POST" })
+/**
+ * Generates a signed OAuth authorize URL. State = base64url(payload).base64url(hmac)
+ * where payload = `${userId}.${nonce}.${ts}` and hmac is HMAC-SHA256 with the
+ * Shopify client secret. The /api/public/shopify-oauth/callback route verifies it.
+ */
+export const startShopifyOAuth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { domain: string; accessToken: string }) =>
+  .inputValidator((d: { domain: string }) =>
     z
       .object({
         domain: z.string().trim().min(3).max(255),
-        accessToken: z.string().trim().min(10).max(500),
       })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      return { ok: false as const, errorMessage: "Shopify app credentials are not configured." };
+    }
     const domain = normalizeDomain(data.domain);
-    const token = data.accessToken.trim();
-
-    // 1. Verify token by fetching shop info
-    let shop: { shop?: { name?: string; myshopify_domain?: string } };
-    try {
-      shop = await shopifyFetch(domain, token, "/shop.json");
-    } catch (e) {
+    if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(domain)) {
       return {
         ok: false as const,
-        errorMessage:
-          e instanceof Error
-            ? `Could not connect: ${e.message}. Check the store URL and access token.`
-            : "Could not connect to Shopify.",
+        errorMessage: "Enter your store as yourstore.myshopify.com",
       };
     }
 
-    const realDomain = shop.shop?.myshopify_domain ?? domain;
-    const webhookSecret = crypto.randomUUID().replace(/-/g, "");
+    const { createHmac, randomBytes } = await import("crypto");
+    const nonce = randomBytes(16).toString("hex");
+    const ts = Date.now().toString();
+    const payload = `${userId}.${nonce}.${ts}`;
+    const sig = createHmac("sha256", clientSecret).update(payload).digest("hex");
+    const state = `${Buffer.from(payload).toString("base64url")}.${sig}`;
+
     const host = getRequestHost();
-    const webhookUrl = `https://${host}/api/public/shopify-webhook?u=${userId}`;
+    const redirectUri = `https://${host}/api/public/shopify-oauth/callback`;
+    const scopes = "read_orders,read_analytics";
 
-    // 2. Register orders/create webhook (delete any existing ones to this URL first)
-    try {
-      const existing = (await shopifyFetch(domain, token, "/webhooks.json")) as {
-        webhooks?: { id: number; address: string; topic: string }[];
-      };
-      for (const w of existing.webhooks ?? []) {
-        if (w.topic === "orders/create" && w.address.includes("/api/public/shopify-webhook")) {
-          await shopifyFetch(domain, token, `/webhooks/${w.id}.json`, { method: "DELETE" });
-        }
-      }
-      await shopifyFetch(domain, token, "/webhooks.json", {
-        method: "POST",
-        body: JSON.stringify({
-          webhook: {
-            topic: "orders/create",
-            address: webhookUrl,
-            format: "json",
-          },
-        }),
-      });
-    } catch (e) {
-      return {
-        ok: false as const,
-        errorMessage:
-          e instanceof Error
-            ? `Token works but webhook registration failed: ${e.message}. Make sure the custom app has the write_webhooks scope.`
-            : "Webhook registration failed.",
-      };
-    }
+    const authUrl =
+      `https://${domain}/admin/oauth/authorize` +
+      `?client_id=${encodeURIComponent(clientId)}` +
+      `&scope=${encodeURIComponent(scopes)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${encodeURIComponent(state)}`;
 
-    // 3. Save credentials
-    const { error } = await supabase
-      .from("user_settings")
-      .upsert(
-        {
-          user_id: userId,
-          shopify_domain: realDomain,
-          shopify_access_token: token,
-          shopify_webhook_secret: webhookSecret,
-        },
-        { onConflict: "user_id" },
-      );
-    if (error) throw new Error(error.message);
-
-    return { ok: true as const, domain: realDomain, shopName: shop.shop?.name ?? realDomain };
+    return { ok: true as const, authUrl, redirectUri };
   });
 
 export const disconnectShopify = createServerFn({ method: "POST" })
