@@ -18,6 +18,7 @@ import {
   saveCampaignBuild,
   listCampaignBuilds,
   createCampaignViaApi,
+  uploadAdImage,
 } from "@/lib/ads.functions";
 
 export const Route = createFileRoute("/_authenticated/utm")({
