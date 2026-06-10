@@ -1020,3 +1020,42 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
       throw new Error(formatAdsConnectionError(error));
     }
   });
+
+const UploadInput = z.object({
+  dataUrl: z.string().min(1).max(20_000_000),
+  filename: z.string().min(1).max(200),
+});
+
+export const uploadAdImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UploadInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const creds = await getCreds(context.supabase, context.userId);
+    if (!creds) throw new Error("OpenAI Ads is not connected. Connect your API key first.");
+
+    const m = /^data:([^;]+);base64,(.+)$/.exec(data.dataUrl);
+    if (!m) throw new Error("Invalid image data");
+    const mime = m[1];
+    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const blob = new Blob([bytes], { type: mime });
+    const form = new FormData();
+    form.append("file", blob, data.filename);
+
+    try {
+      const res = await fetch(`${OPENAI_ADS_BASE}/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${creds.apiKey}` },
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new OpenAIAdsApiError(res.status, body.slice(0, 1000) || res.statusText, parseAdsApiMessage(body));
+      }
+      const json = (await res.json()) as { file_id?: string; id?: string };
+      const fileId = json.file_id ?? json.id;
+      if (!fileId) throw new Error("Upload did not return a file_id");
+      return { fileId };
+    } catch (error) {
+      throw new Error(formatAdsConnectionError(error));
+    }
+  });
