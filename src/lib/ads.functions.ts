@@ -895,6 +895,82 @@ Return JSON with this exact shape:
     };
   });
 
+// ---------- Copy Regeneration ----------
+export const regenerateCopy = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BuildInput.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+
+    const { data: settings } = await supabase
+      .from("user_settings")
+      .select("connected_account_name")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const brand =
+      data.brand?.trim() ||
+      (settings?.connected_account_name as string | undefined)?.trim() ||
+      "Brand";
+
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
+    const systemPrompt =
+      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. HARD LIMITS (non-negotiable): every headline must be 30 characters or fewer (count every character including spaces); every body/description must be 65 characters or fewer. Count carefully before responding and rewrite anything over the limit.";
+    const userPrompt = `Generate 3 headline options and 3 body copy options for a ChatGPT ad. Rules: Headlines must be under 30 characters, direct, and product-first (example: 'Blue Nitrile Gloves - 1,000/Case'). Body copy must be under 65 characters, one or two short punchy sentences, no fluff (example: 'Powder-free nitrile gloves for industrial use. Bulk pricing.'). Do NOT use adjectives like 'superior', 'premium', 'trusted', or 'reliable'. Lead with the product and quantity or use case, then the key benefit. Less is more.\n\nProduct: ${data.productName}\nDescription: ${data.productDescription}\nTarget audience: ${data.targetAudience}\nMonthly budget: $${data.monthlyBudget}\n\nStrict character limits: headlines <=30 chars, bodies <=65 chars. Do not exceed these under any circumstance.\n\nReturn JSON with this exact shape:\n{"headlines":["...","...","..."],"bodies":["...","...","..."]}`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!aiRes.ok) {
+      const txt = await aiRes.text().catch(() => "");
+      if (aiRes.status === 429) throw new Error("AI rate limit hit. Try again shortly.");
+      if (aiRes.status === 402) throw new Error("AI credits exhausted. Please add credits.");
+      throw new Error(`AI generation failed: ${aiRes.status} ${txt.slice(0, 200)}`);
+    }
+    const aiJson = (await aiRes.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = aiJson.choices?.[0]?.message?.content ?? "{}";
+    let parsed: { headlines?: string[]; bodies?: string[] } = {};
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = {};
+    }
+    const clampAtWord = (s: string, max: number) => {
+      const trimmed = String(s).trim().replace(/\s+/g, " ");
+      if (trimmed.length <= max) return trimmed;
+      const sliced = trimmed.slice(0, max);
+      const lastSpace = sliced.lastIndexOf(" ");
+      const base = lastSpace > Math.floor(max * 0.6) ? sliced.slice(0, lastSpace) : sliced;
+      return base.replace(/[\s\-–—,.;:!?]+$/, "");
+    };
+    const headlines = (parsed.headlines ?? []).slice(0, 3).map((s) => clampAtWord(s, 30));
+    const bodies = (parsed.bodies ?? []).slice(0, 3).map((s) => clampAtWord(s, 65));
+
+    while (headlines.length < 3) headlines.push(clampAtWord(`${data.productName} — shop now`, 30));
+    while (bodies.length < 3) bodies.push(clampAtWord(`Discover ${data.productName}. Built for ${data.targetAudience}.`, 65));
+
+    return { headlines, bodies, brand };
+  });
+
+const SaveBuildInput
+
 const SaveBuildInput = z.object({
   productName: z.string().min(1).max(200),
   productUrl: z.string().url().max(500),
