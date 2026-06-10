@@ -506,6 +506,26 @@ function CampaignBuilderPage() {
                       />
                       <p className="text-xs text-muted-foreground">Recommended: $3.50+</p>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="adimage">Ad image</Label>
+                      <Input
+                        id="adimage"
+                        type="file"
+                        accept="image/*"
+                        className="w-56"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleImagePick(f);
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {upload.isPending
+                          ? "Uploading…"
+                          : adImageFileId
+                            ? `Uploaded: ${adImageName ?? "image"}`
+                            : "Required by OpenAI Ads"}
+                      </p>
+                    </div>
                     <Button variant="outline" onClick={saveDraft}>Save draft</Button>
                     <Button
                       onClick={() => {
@@ -518,6 +538,10 @@ function CampaignBuilderPage() {
                           toast.error("Enter a valid max CPC bid");
                           return;
                         }
+                        if (!adImageFileId) {
+                          toast.error("Upload an ad image first");
+                          return;
+                        }
                         remote.mutate({
                           campaignName: result.campaignName,
                           lifetimeBudgetMicros: result.lifetimeBudgetMicros,
@@ -526,9 +550,10 @@ function CampaignBuilderPage() {
                           body: selectedBody,
                           destinationUrl: result.utmUrl,
                           contextHints: hints.length ? hints : result.contextHints,
+                          fileId: adImageFileId,
                         });
                       }}
-                      disabled={remote.isPending}
+                      disabled={remote.isPending || upload.isPending || !adImageFileId}
                     >
                       {remote.isPending ? "Creating..." : "Create Campaign via API"}
                     </Button>
