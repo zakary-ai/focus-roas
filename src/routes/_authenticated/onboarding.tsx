@@ -14,10 +14,9 @@ import {
   getSettings,
   verifyApiKey,
   updateStoreUrl,
-  updateChecklist,
   completeOnboarding,
 } from "@/lib/ads.functions";
-import { CONVERSION_STEPS } from "@/lib/shopify-pixel-snippet";
+import { ShopifyWebhookCard } from "@/components/shopify-webhook-card";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -28,7 +27,6 @@ function Onboarding() {
   const getSettingsFn = useServerFn(getSettings);
   const verifyFn = useServerFn(verifyApiKey);
   const storeUrlFn = useServerFn(updateStoreUrl);
-  const checklistFn = useServerFn(updateChecklist);
   const completeFn = useServerFn(completeOnboarding);
 
   const { data: settings, refetch } = useQuery({
@@ -90,11 +88,6 @@ function Onboarding() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function toggleCheck(key: string, value: boolean) {
-    await checklistFn({ data: { key, complete: value } });
-    await refetch();
   }
 
   async function finish() {
@@ -161,32 +154,14 @@ function Onboarding() {
 
         {step === 3 && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">Set up conversions</h2>
+            <h2 className="text-2xl font-semibold">Connect Shopify</h2>
             <p className="text-sm text-muted-foreground">
-              Connect Shopify to OpenAI Ads Manager. Full code &amp; copy button live on the{" "}
-              <a href="/conversions" target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline">
-                Conversions page
-              </a>.
+              Add this webhook in your Shopify admin so we can track orders automatically.
             </p>
-            <ul className="space-y-2">
-              {CONVERSION_STEPS.map((it, idx) => {
-                const checked = !!settings?.conversionChecklist?.[it.key];
-                return (
-                  <li key={it.key} className="flex items-start gap-3 rounded-lg border p-3">
-                    <Checkbox checked={checked} onCheckedChange={(v) => toggleCheck(it.key, !!v)} id={`c-${idx}`} className="mt-1" />
-                    <Label htmlFor={`c-${idx}`} className="cursor-pointer space-y-0.5 text-sm leading-snug">
-                      <span className="block font-medium text-foreground">
-                        <span className="text-muted-foreground">{idx + 1}.</span> {it.title}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">{it.body}</span>
-                    </Label>
-                  </li>
-                );
-              })}
-            </ul>
+            <ShopifyWebhookCard />
             <div className="flex justify-between">
               <Button variant="ghost" onClick={() => setStep(2)}>Back</Button>
-              <Button onClick={() => setStep(4)}>I've set up conversions</Button>
+              <Button onClick={() => setStep(4)}>I've added the webhook</Button>
             </div>
           </div>
         )}
