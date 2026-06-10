@@ -27,17 +27,27 @@ export const Route = createFileRoute("/api/public/shopify-oauth/callback")({
         }
 
         // 1. Verify Shopify's HMAC over the callback params.
-        // Shopify expects the query params to be parsed into key/value pairs,
-        // hmac removed, then re-joined as "key=value" pairs sorted alphabetically.
-        const message = [...url.searchParams.entries()]
+        // Mirror Shopify's official libs: parse params, remove hmac/signature,
+        // sort by key, then re-serialize via URLSearchParams.
+        const sortedParams = new URLSearchParams();
+        [...url.searchParams.entries()]
           .filter(([key]) => key !== "hmac" && key !== "signature")
           .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-          .map(([key, value]) => `${key}=${value}`)
-          .join("&");
+          .forEach(([key, value]) => {
+            sortedParams.append(key, value);
+          });
+        const message = sortedParams.toString();
         const expectedShopify = createHmac("sha256", clientSecret).update(message).digest("hex");
         const a = Buffer.from(shopifyHmac);
         const b = Buffer.from(expectedShopify);
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
+          console.error("Shopify OAuth HMAC mismatch", {
+            shop,
+            queryKeys: [...url.searchParams.keys()].sort(),
+            message,
+            receivedPrefix: shopifyHmac.slice(0, 12),
+            expectedPrefix: expectedShopify.slice(0, 12),
+          });
           return new Response("Invalid Shopify HMAC", { status: 401 });
         }
 
