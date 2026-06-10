@@ -963,6 +963,7 @@ const CreateRemoteInput = z.object({
   body: z.string().min(1).max(500),
   destinationUrl: z.string().url().max(1000),
   contextHints: z.array(z.string().min(1).max(80)).min(1).max(10),
+  fileId: z.string().min(1).max(200),
 });
 
 export const createCampaignViaApi = createServerFn({ method: "POST" })
@@ -1009,6 +1010,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
             title: data.headline.slice(0, 50),
             body: data.body.slice(0, 100),
             target_url: data.destinationUrl,
+            file_id: data.fileId,
           },
         }),
       });
