@@ -74,11 +74,15 @@ function CampaignBuilderPage() {
         campaignName?: string;
         contextHints?: string[];
         monthlyBudget?: number | null;
+        productDescription?: string;
       };
       if (p.campaignName) setCampaignNameInput(p.campaignName);
       if (Array.isArray(p.contextHints)) setHints(p.contextHints.slice(0, 10));
       if (typeof p.monthlyBudget === "number" && p.monthlyBudget > 0) {
         setMonthlyBudget(String(p.monthlyBudget));
+      }
+      if (typeof p.productDescription === "string" && p.productDescription) {
+        setProductDescription(p.productDescription);
       }
       toast.success("Prefilled from existing campaign");
     } catch {

@@ -84,6 +84,7 @@ export function CampaignDetailSheet({
           body: firstAd?.body ?? "",
           destinationUrl: firstAd?.destinationUrl ?? "",
           contextHints: allHints,
+          productDescription: allHints.join(", "),
           monthlyBudget: data.campaign.lifetimeBudget ?? data.campaign.dailyBudget
             ? Math.round(((data.campaign.lifetimeBudget ?? 0) || ((data.campaign.dailyBudget ?? 0) * 30)))
             : null,
