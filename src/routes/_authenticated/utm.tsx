@@ -477,13 +477,13 @@ function CampaignBuilderPage() {
                           <label htmlFor="b-custom" className="flex-1 text-sm font-medium">
                             Write your own
                           </label>
-                          <span className={`text-xs ${customBody.length > 65 ? "text-destructive" : "text-muted-foreground"}`}>
-                            {customBody.length}/65
+                          <span className={`text-xs ${customBody.length > 80 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {customBody.length}/80
                           </span>
                         </div>
                         <Textarea
-                          placeholder="Your body copy (max 65 chars)"
-                          maxLength={65}
+                          placeholder="Your body copy (max 80 chars)"
+                          maxLength={80}
                           rows={2}
                           value={customBody}
                           onFocus={() => setSelectedBodyIdx(-1)}
