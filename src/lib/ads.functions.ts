@@ -1005,9 +1005,10 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           name: `${data.campaignName} - Ad1`,
           status: "paused",
           creative: {
-            headline: data.headline,
-            body: data.body,
-            destination_url: data.destinationUrl,
+            type: "chat_card",
+            title: data.headline.slice(0, 50),
+            body: data.body.slice(0, 100),
+            target_url: data.destinationUrl,
           },
         }),
       });
