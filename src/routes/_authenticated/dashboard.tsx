@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/app-shell";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { getDashboardMetrics, getSettings } from "@/lib/ads.functions";
 import { CampaignDetailSheet } from "@/components/campaign-detail-sheet";
 
@@ -28,7 +28,54 @@ function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ["metrics", days],
     queryFn: () => metricsFn({ data: { days } }),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  type SortKey = "name" | "spend" | "clicks" | "ctr" | "cpc" | "revenue" | "roas";
+  const [sortKey, setSortKey] = useState<SortKey>("spend");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const sortedCampaigns = useMemo(() => {
+    const rows = data?.campaigns ? [...data.campaigns] : [];
+    rows.sort((a, b) => {
+      if (sortKey === "name") {
+        return sortDir === "asc"
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      }
+      const av = (a[sortKey] as number) ?? 0;
+      const bv = (b[sortKey] as number) ?? 0;
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return rows;
+  }, [data, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortHeader({ k, label, align = "right" }: { k: SortKey; label: string; align?: "left" | "right" }) {
+    const active = sortKey === k;
+    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <TableHead className={align === "right" ? "text-right" : ""}>
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className={`inline-flex items-center gap-1 hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"} ${align === "right" ? "justify-end w-full" : ""}`}
+        >
+          {label}
+          <Icon className="h-3.5 w-3.5" />
+        </button>
+      </TableHead>
+    );
+  }
 
   useEffect(() => {
     if (settings && !settings.onboardingCompleted && !settings.apiKeyConnected) {
@@ -111,17 +158,17 @@ function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Campaign</TableHead>
-                    <TableHead className="text-right">Spend</TableHead>
-                    <TableHead className="text-right">Clicks</TableHead>
-                    <TableHead className="text-right">CTR</TableHead>
-                    <TableHead className="text-right">CPC</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">ROAS</TableHead>
+                    <SortHeader k="name" label="Campaign" align="left" />
+                    <SortHeader k="spend" label="Spend" />
+                    <SortHeader k="clicks" label="Clicks" />
+                    <SortHeader k="ctr" label="CTR" />
+                    <SortHeader k="cpc" label="CPC" />
+                    <SortHeader k="revenue" label="Revenue" />
+                    <SortHeader k="roas" label="ROAS" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.campaigns.map((c) => (
+                  {sortedCampaigns.map((c) => (
                     <TableRow
                       key={c.id}
                       onClick={() => setSelectedCampaignId(c.id)}
