@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getSettings, verifyApiKey, updateStoreUrl, deleteAccountData } from "@/lib/ads.functions";
-import { getShopifyStatus, connectShopify, disconnectShopify } from "@/lib/shopify.functions";
+import { getShopifyStatus, startShopifyOAuth, disconnectShopify } from "@/lib/shopify.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -35,7 +35,7 @@ function SettingsPage() {
   const storeFn = useServerFn(updateStoreUrl);
   const deleteFn = useServerFn(deleteAccountData);
   const shopifyStatusFn = useServerFn(getShopifyStatus);
-  const shopifyConnectFn = useServerFn(connectShopify);
+  const shopifyConnectFn = useServerFn(startShopifyOAuth);
   const shopifyDisconnectFn = useServerFn(disconnectShopify);
 
   const { data: settings, refetch } = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn() });
@@ -46,7 +46,6 @@ function SettingsPage() {
   const [newKey, setNewKey] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
   const [shopDomain, setShopDomain] = useState("");
-  const [shopToken, setShopToken] = useState("");
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
@@ -77,24 +76,17 @@ function SettingsPage() {
   }
 
   async function connectShop() {
-    if (!shopDomain.trim() || !shopToken.trim()) {
-      return toast.error("Enter store domain and access token");
-    }
+    if (!shopDomain.trim()) return toast.error("Enter your store domain");
     setConnecting(true);
     try {
-      const res = await shopifyConnectFn({
-        data: { domain: shopDomain.trim(), accessToken: shopToken.trim() },
-      });
+      const res = await shopifyConnectFn({ data: { domain: shopDomain.trim() } });
       if (!res.ok) {
         toast.error(res.errorMessage);
         return;
       }
-      toast.success(`Connected to ${res.shopName}`);
-      setShopToken("");
-      await refetchShopify();
+      window.location.href = res.authUrl;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not connect");
-    } finally {
       setConnecting(false);
     }
   }
@@ -175,17 +167,8 @@ function SettingsPage() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Connect your Shopify store to track real revenue and ROAS per campaign.
+                  Click connect and approve the permissions in your Shopify admin. We'll handle the rest.
                 </p>
-                <details className="rounded-md border p-3 text-sm">
-                  <summary className="cursor-pointer font-medium">How to get your access token</summary>
-                  <ol className="ml-4 mt-2 list-decimal space-y-1 text-muted-foreground">
-                    <li>In Shopify admin: <strong>Settings → Apps and sales channels → Develop apps</strong></li>
-                    <li>Click <strong>Create an app</strong>, name it (e.g. "Lovable Tracking")</li>
-                    <li>Click <strong>Configure Admin API scopes</strong> and enable <code>read_orders</code> and <code>write_webhooks</code></li>
-                    <li>Click <strong>Install app</strong>, then copy the <strong>Admin API access token</strong> (starts with <code>shpat_</code>)</li>
-                  </ol>
-                </details>
                 <div>
                   <Label htmlFor="shop-domain">Store domain</Label>
                   <Input
@@ -193,16 +176,6 @@ function SettingsPage() {
                     placeholder="mystore.myshopify.com"
                     value={shopDomain}
                     onChange={(e) => setShopDomain(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="shop-token">Admin API access token</Label>
-                  <Input
-                    id="shop-token"
-                    type="password"
-                    placeholder="shpat_..."
-                    value={shopToken}
-                    onChange={(e) => setShopToken(e.target.value)}
                   />
                 </div>
                 <Button onClick={connectShop} disabled={connecting}>
