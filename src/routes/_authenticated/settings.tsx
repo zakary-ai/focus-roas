@@ -79,16 +79,18 @@ function SettingsPage() {
     if (!shopDomain.trim()) return toast.error("Enter your store domain");
     setConnecting(true);
     try {
-      const res = await shopifyConnectFn({ data: { domain: shopDomain.trim() } });
+      const res = await shopifyConnectFn({
+        data: { domain: shopDomain.trim(), origin: window.location.origin },
+      });
       if (!res.ok) {
         toast.error(res.errorMessage);
         return;
       }
-      // Shopify refuses to render inside an iframe (preview), so break out to the top window.
-      if (window.top && window.top !== window.self) {
-        window.top.location.href = res.authUrl;
-      } else {
-        window.location.href = res.authUrl;
+      // Open in a new tab — the preview iframe can't navigate the top window,
+      // and Shopify refuses to render inside iframes anyway.
+      const win = window.open(res.authUrl, "_blank", "noopener");
+      if (!win) {
+        toast.error("Pop-up blocked — allow pop-ups for this site and try again.");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not connect");

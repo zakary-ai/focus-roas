@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -49,10 +48,11 @@ export const getShopifyStatus = createServerFn({ method: "GET" })
  */
 export const startShopifyOAuth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { domain: string }) =>
+  .inputValidator((d: { domain: string; origin: string }) =>
     z
       .object({
         domain: z.string().trim().min(3).max(255),
+        origin: z.string().trim().url().max(255),
       })
       .parse(d),
   )
@@ -78,8 +78,8 @@ export const startShopifyOAuth = createServerFn({ method: "POST" })
     const sig = createHmac("sha256", clientSecret).update(payload).digest("hex");
     const state = `${Buffer.from(payload).toString("base64url")}.${sig}`;
 
-    const host = getRequestHost();
-    const redirectUri = `https://${host}/api/public/shopify-oauth/callback`;
+    const origin = data.origin.replace(/\/$/, "");
+    const redirectUri = `${origin}/api/public/shopify-oauth/callback`;
     const scopes = "read_orders,read_analytics";
 
     const authUrl =
