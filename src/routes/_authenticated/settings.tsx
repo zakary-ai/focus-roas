@@ -84,7 +84,12 @@ function SettingsPage() {
         toast.error(res.errorMessage);
         return;
       }
-      window.location.href = res.authUrl;
+      // Shopify refuses to render inside an iframe (preview), so break out to the top window.
+      if (window.top && window.top !== window.self) {
+        window.top.location.href = res.authUrl;
+      } else {
+        window.location.href = res.authUrl;
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not connect");
       setConnecting(false);
