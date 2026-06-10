@@ -1054,7 +1054,6 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         body: JSON.stringify({
           name: data.campaignName,
           status: "paused",
-          type: "clicks",
           budget: {
             lifetime_spend_limit_micros: data.lifetimeBudgetMicros,
           },
