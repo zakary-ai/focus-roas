@@ -979,6 +979,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
         body: JSON.stringify({
           name: data.campaignName,
           status: "paused",
+          type: "clicks",
           budget: {
             lifetime_spend_limit_micros: data.lifetimeBudgetMicros,
           },
@@ -996,6 +997,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
             billing_event_type: "impression",
             max_bid_micros: data.maxCpcBidMicros,
           },
+          conversion_event: "order_created",
         }),
       });
 
