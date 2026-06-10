@@ -74,6 +74,7 @@ function CampaignBuilderPage() {
         campaignName?: string;
         contextHints?: string[];
         monthlyBudget?: number | null;
+        productDescription?: string;
       };
       if (p.campaignName) setCampaignNameInput(p.campaignName);
       if (Array.isArray(p.contextHints)) setHints(p.contextHints.slice(0, 10));
