@@ -382,7 +382,28 @@ function CampaignBuilderPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label className="mb-2 block">Headlines</Label>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Headlines</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        disabled={regenerate.isPending || !productName || !productUrl || !productDescription || !targetAudience || !monthlyBudget}
+                        onClick={() => {
+                          regenerate.mutate({
+                            productName,
+                            productUrl,
+                            productDescription,
+                            monthlyBudget: Number(monthlyBudget),
+                            targetAudience,
+                          });
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Regenerate
+                      </Button>
+                    </div>
                     <RadioGroup
                       value={String(selectedHeadlineIdx)}
                       onValueChange={(v) => setSelectedHeadlineIdx(Number(v))}
