@@ -51,6 +51,7 @@ function CampaignBuilderPage() {
   const createRemoteFn = useServerFn(createCampaignViaApi);
   const listFn = useServerFn(listCampaignBuilds);
   const uploadFn = useServerFn(uploadAdImage);
+  const regenerateFn = useServerFn(regenerateCopy);
 
   const [campaignNameInput, setCampaignNameInput] = useState("");
   const [productName, setProductName] = useState("");
