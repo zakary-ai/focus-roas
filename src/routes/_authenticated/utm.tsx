@@ -374,6 +374,24 @@ function CampaignBuilderPage() {
                           <CopyButton text={h} />
                         </div>
                       ))}
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="-1" id="h-custom" />
+                          <label htmlFor="h-custom" className="flex-1 text-sm font-medium">
+                            Write your own
+                          </label>
+                          <span className={`text-xs ${customHeadline.length > 30 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {customHeadline.length}/30
+                          </span>
+                        </div>
+                        <Input
+                          placeholder="Your headline (max 30 chars)"
+                          maxLength={30}
+                          value={customHeadline}
+                          onFocus={() => setSelectedHeadlineIdx(-1)}
+                          onChange={(e) => setCustomHeadline(e.target.value)}
+                        />
+                      </div>
                     </RadioGroup>
                   </div>
                   <div>
@@ -390,6 +408,25 @@ function CampaignBuilderPage() {
                           <CopyButton text={b} />
                         </div>
                       ))}
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <div className="flex items-center gap-3">
+                          <RadioGroupItem value="-1" id="b-custom" />
+                          <label htmlFor="b-custom" className="flex-1 text-sm font-medium">
+                            Write your own
+                          </label>
+                          <span className={`text-xs ${customBody.length > 65 ? "text-destructive" : "text-muted-foreground"}`}>
+                            {customBody.length}/65
+                          </span>
+                        </div>
+                        <Textarea
+                          placeholder="Your body copy (max 65 chars)"
+                          maxLength={65}
+                          rows={2}
+                          value={customBody}
+                          onFocus={() => setSelectedBodyIdx(-1)}
+                          onChange={(e) => setCustomBody(e.target.value)}
+                        />
+                      </div>
                     </RadioGroup>
                   </div>
 
