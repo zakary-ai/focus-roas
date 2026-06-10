@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Sparkles, CheckCircle2, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Copy, Sparkles, CheckCircle2, X, Upload, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   buildCampaign,
@@ -19,6 +19,7 @@ import {
   listCampaignBuilds,
   createCampaignViaApi,
   uploadAdImage,
+  regenerateCopy,
 } from "@/lib/ads.functions";
 
 export const Route = createFileRoute("/_authenticated/utm")({
@@ -50,6 +51,7 @@ function CampaignBuilderPage() {
   const createRemoteFn = useServerFn(createCampaignViaApi);
   const listFn = useServerFn(listCampaignBuilds);
   const uploadFn = useServerFn(uploadAdImage);
+  const regenerateFn = useServerFn(regenerateCopy);
 
   const [campaignNameInput, setCampaignNameInput] = useState("");
   const [productName, setProductName] = useState("");
@@ -162,6 +164,25 @@ function CampaignBuilderPage() {
         contextHints: r.contextHints.slice(0, 10),
         utmUrl: r.utmUrl,
       });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const regenerate = useMutation({
+    mutationFn: (input: {
+      productName: string;
+      productUrl: string;
+      productDescription: string;
+      monthlyBudget: number;
+      targetAudience: string;
+    }) => regenerateFn({ data: input }),
+    onSuccess: (r) => {
+      if (result) {
+        setResult({ ...result, headlines: r.headlines, bodies: r.bodies });
+        setSelectedHeadlineIdx(0);
+        setSelectedBodyIdx(0);
+        toast.success("Copy regenerated");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -361,7 +382,28 @@ function CampaignBuilderPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
-                    <Label className="mb-2 block">Headlines</Label>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Headlines</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        disabled={regenerate.isPending || !productName || !productUrl || !productDescription || !targetAudience || !monthlyBudget}
+                        onClick={() => {
+                          regenerate.mutate({
+                            productName,
+                            productUrl,
+                            productDescription,
+                            monthlyBudget: Number(monthlyBudget),
+                            targetAudience,
+                          });
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Regenerate
+                      </Button>
+                    </div>
                     <RadioGroup
                       value={String(selectedHeadlineIdx)}
                       onValueChange={(v) => setSelectedHeadlineIdx(Number(v))}
@@ -395,7 +437,28 @@ function CampaignBuilderPage() {
                     </RadioGroup>
                   </div>
                   <div>
-                    <Label className="mb-2 block">Body copy</Label>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Body copy</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs"
+                        disabled={regenerate.isPending || !productName || !productUrl || !productDescription || !targetAudience || !monthlyBudget}
+                        onClick={() => {
+                          regenerate.mutate({
+                            productName,
+                            productUrl,
+                            productDescription,
+                            monthlyBudget: Number(monthlyBudget),
+                            targetAudience,
+                          });
+                        }}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Regenerate
+                      </Button>
+                    </div>
                     <RadioGroup
                       value={String(selectedBodyIdx)}
                       onValueChange={(v) => setSelectedBodyIdx(Number(v))}
