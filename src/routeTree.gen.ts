@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConversionsRouteImport } from './routes/_authenticated/conversions'
 import { Route as ApiPublicShopifyWebhookRouteImport } from './routes/api/public/shopify-webhook'
 import { Route as AuthenticatedHelpApiKeyRouteImport } from './routes/_authenticated/help.api-key'
+import { Route as ApiPublicShopifyOauthCallbackRouteImport } from './routes/api/public/shopify-oauth.callback'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -70,6 +71,12 @@ const AuthenticatedHelpApiKeyRoute = AuthenticatedHelpApiKeyRouteImport.update({
   path: '/help/api-key',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicShopifyOauthCallbackRoute =
+  ApiPublicShopifyOauthCallbackRouteImport.update({
+    id: '/api/public/shopify-oauth/callback',
+    path: '/api/public/shopify-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/utm': typeof AuthenticatedUtmRoute
   '/help/api-key': typeof AuthenticatedHelpApiKeyRoute
   '/api/public/shopify-webhook': typeof ApiPublicShopifyWebhookRoute
+  '/api/public/shopify-oauth/callback': typeof ApiPublicShopifyOauthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesByTo {
   '/utm': typeof AuthenticatedUtmRoute
   '/help/api-key': typeof AuthenticatedHelpApiKeyRoute
   '/api/public/shopify-webhook': typeof ApiPublicShopifyWebhookRoute
+  '/api/public/shopify-oauth/callback': typeof ApiPublicShopifyOauthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,6 +114,7 @@ export interface FileRoutesById {
   '/_authenticated/utm': typeof AuthenticatedUtmRoute
   '/_authenticated/help/api-key': typeof AuthenticatedHelpApiKeyRoute
   '/api/public/shopify-webhook': typeof ApiPublicShopifyWebhookRoute
+  '/api/public/shopify-oauth/callback': typeof ApiPublicShopifyOauthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/utm'
     | '/help/api-key'
     | '/api/public/shopify-webhook'
+    | '/api/public/shopify-oauth/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/utm'
     | '/help/api-key'
     | '/api/public/shopify-webhook'
+    | '/api/public/shopify-oauth/callback'
   id:
     | '__root__'
     | '/'
@@ -141,6 +153,7 @@ export interface FileRouteTypes {
     | '/_authenticated/utm'
     | '/_authenticated/help/api-key'
     | '/api/public/shopify-webhook'
+    | '/api/public/shopify-oauth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -148,6 +161,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicShopifyWebhookRoute: typeof ApiPublicShopifyWebhookRoute
+  ApiPublicShopifyOauthCallbackRoute: typeof ApiPublicShopifyOauthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -222,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpApiKeyRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/shopify-oauth/callback': {
+      id: '/api/public/shopify-oauth/callback'
+      path: '/api/public/shopify-oauth/callback'
+      fullPath: '/api/public/shopify-oauth/callback'
+      preLoaderRoute: typeof ApiPublicShopifyOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -252,7 +273,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicShopifyWebhookRoute: ApiPublicShopifyWebhookRoute,
+  ApiPublicShopifyOauthCallbackRoute: ApiPublicShopifyOauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
