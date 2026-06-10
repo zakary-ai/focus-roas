@@ -2,23 +2,12 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
 function buildShopifySignedQuery(url: URL) {
-  const entries = url.search.slice(1).split("&").filter(Boolean);
+  const params = [...url.searchParams.entries()];
+  const filteredParams = params.filter(([key]) => key !== "hmac");
 
-  return entries
-    .map((entry) => {
-      const equalsIndex = entry.indexOf("=");
-      const rawKey = equalsIndex === -1 ? entry : entry.slice(0, equalsIndex);
-      const rawValue = equalsIndex === -1 ? "" : entry.slice(equalsIndex + 1);
-
-      return {
-        rawKey,
-        rawValue,
-        decodedKey: decodeURIComponent(rawKey.replace(/\+/g, " ")),
-      };
-    })
-    .filter(({ decodedKey }) => decodedKey !== "hmac")
-    .sort((left, right) => left.decodedKey.localeCompare(right.decodedKey))
-    .map(({ rawKey, rawValue }) => `${rawKey}=${rawValue}`)
+  return filteredParams
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, value]) => `${key}=${value}`)
     .join("&");
 }
 
@@ -47,18 +36,26 @@ export const Route = createFileRoute("/api/public/shopify-oauth/callback")({
           return new Response("Invalid shop domain", { status: 400 });
         }
 
-        // 1. Verify Shopify's HMAC over the original callback query string.
-        const message = buildShopifySignedQuery(url);
-        const expectedShopify = createHmac("sha256", clientSecret).update(message, "utf8").digest("hex");
-        const a = Buffer.from(shopifyHmac, "utf8");
-        const b = Buffer.from(expectedShopify, "utf8");
-        if (a.length !== b.length || !timingSafeEqual(a, b)) {
+        // 1. Verify Shopify's HMAC over the callback query string.
+        const signedQuery = buildShopifySignedQuery(url);
+        const computedHmac = createHmac("sha256", clientSecret).update(signedQuery, "utf8").digest("hex");
+
+        console.log("Shopify OAuth HMAC debug", {
+          shop,
+          signedQuery,
+          receivedHmac: shopifyHmac,
+          computedHmac,
+        });
+
+        const receivedBuffer = Buffer.from(shopifyHmac, "utf8");
+        const computedBuffer = Buffer.from(computedHmac, "utf8");
+        if (receivedBuffer.length !== computedBuffer.length || !timingSafeEqual(receivedBuffer, computedBuffer)) {
           console.error("Shopify OAuth HMAC mismatch", {
             shop,
             queryKeys: [...url.searchParams.keys()].sort(),
-            message,
-            receivedPrefix: shopifyHmac.slice(0, 12),
-            expectedPrefix: expectedShopify.slice(0, 12),
+            signedQuery,
+            receivedHmac: shopifyHmac,
+            computedHmac,
           });
           return new Response("Invalid Shopify HMAC", { status: 401 });
         }
