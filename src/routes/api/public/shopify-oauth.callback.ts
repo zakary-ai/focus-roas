@@ -1,6 +1,27 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
+function buildShopifySignedQuery(url: URL) {
+  const entries = url.search.slice(1).split("&").filter(Boolean);
+
+  return entries
+    .map((entry) => {
+      const equalsIndex = entry.indexOf("=");
+      const rawKey = equalsIndex === -1 ? entry : entry.slice(0, equalsIndex);
+      const rawValue = equalsIndex === -1 ? "" : entry.slice(equalsIndex + 1);
+
+      return {
+        rawKey,
+        rawValue,
+        decodedKey: decodeURIComponent(rawKey.replace(/\+/g, " ")),
+      };
+    })
+    .filter(({ decodedKey }) => decodedKey !== "hmac")
+    .sort((left, right) => left.decodedKey.localeCompare(right.decodedKey))
+    .map(({ rawKey, rawValue }) => `${rawKey}=${rawValue}`)
+    .join("&");
+}
+
 export const Route = createFileRoute("/api/public/shopify-oauth/callback")({
   server: {
     handlers: {
@@ -26,20 +47,11 @@ export const Route = createFileRoute("/api/public/shopify-oauth/callback")({
           return new Response("Invalid shop domain", { status: 400 });
         }
 
-        // 1. Verify Shopify's HMAC over the callback params.
-        // Mirror Shopify's official libs: parse params, remove hmac/signature,
-        // sort by key, then re-serialize via URLSearchParams.
-        const sortedParams = new URLSearchParams();
-        [...url.searchParams.entries()]
-          .filter(([key]) => key !== "hmac" && key !== "signature")
-          .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
-          .forEach(([key, value]) => {
-            sortedParams.append(key, value);
-          });
-        const message = sortedParams.toString();
-        const expectedShopify = createHmac("sha256", clientSecret).update(message).digest("hex");
-        const a = Buffer.from(shopifyHmac);
-        const b = Buffer.from(expectedShopify);
+        // 1. Verify Shopify's HMAC over the original callback query string.
+        const message = buildShopifySignedQuery(url);
+        const expectedShopify = createHmac("sha256", clientSecret).update(message, "utf8").digest("hex");
+        const a = Buffer.from(shopifyHmac, "utf8");
+        const b = Buffer.from(expectedShopify, "utf8");
         if (a.length !== b.length || !timingSafeEqual(a, b)) {
           console.error("Shopify OAuth HMAC mismatch", {
             shop,
