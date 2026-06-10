@@ -26,18 +26,14 @@ export const Route = createFileRoute("/api/public/shopify-oauth/callback")({
           return new Response("Invalid shop domain", { status: 400 });
         }
 
-        // 1. Verify Shopify's HMAC over the raw query string (excluding hmac & signature).
-        // Shopify computes HMAC over the URL-encoded key=value pairs as received,
-        // sorted lexicographically by the encoded pair, joined with "&".
-        const rawQuery = url.search.startsWith("?") ? url.search.slice(1) : url.search;
-        const params = rawQuery
-          .split("&")
-          .filter((p) => {
-            const k = p.split("=")[0];
-            return k !== "hmac" && k !== "signature";
-          })
-          .sort();
-        const message = params.join("&");
+        // 1. Verify Shopify's HMAC over the callback params.
+        // Shopify expects the query params to be parsed into key/value pairs,
+        // hmac removed, then re-joined as "key=value" pairs sorted alphabetically.
+        const message = [...url.searchParams.entries()]
+          .filter(([key]) => key !== "hmac" && key !== "signature")
+          .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+          .map(([key, value]) => `${key}=${value}`)
+          .join("&");
         const expectedShopify = createHmac("sha256", clientSecret).update(message).digest("hex");
         const a = Buffer.from(shopifyHmac);
         const b = Buffer.from(expectedShopify);
