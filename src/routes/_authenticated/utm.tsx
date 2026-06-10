@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Sparkles, CheckCircle2, X, Upload, Image as ImageIcon } from "lucide-react";
+import { Copy, Sparkles, CheckCircle2, X, Upload, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   buildCampaign,
@@ -19,6 +19,7 @@ import {
   listCampaignBuilds,
   createCampaignViaApi,
   uploadAdImage,
+  regenerateCopy,
 } from "@/lib/ads.functions";
 
 export const Route = createFileRoute("/_authenticated/utm")({
