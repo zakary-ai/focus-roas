@@ -49,6 +49,7 @@ function CampaignBuilderPage() {
   const saveFn = useServerFn(saveCampaignBuild);
   const createRemoteFn = useServerFn(createCampaignViaApi);
   const listFn = useServerFn(listCampaignBuilds);
+  const uploadFn = useServerFn(uploadAdImage);
 
   const [campaignNameInput, setCampaignNameInput] = useState("");
   const [productName, setProductName] = useState("");
@@ -65,6 +66,38 @@ function CampaignBuilderPage() {
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [remoteCampaignId, setRemoteCampaignId] = useState<string | null>(null);
   const [maxCpcBid, setMaxCpcBid] = useState<string>("3.50");
+  const [adImageFileId, setAdImageFileId] = useState<string | null>(null);
+  const [adImagePreview, setAdImagePreview] = useState<string | null>(null);
+  const [adImageName, setAdImageName] = useState<string | null>(null);
+
+  const upload = useMutation({
+    mutationFn: (input: { dataUrl: string; filename: string }) => uploadFn({ data: input }),
+    onSuccess: (res) => {
+      setAdImageFileId(res.fileId);
+      toast.success("Image uploaded");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Upload failed"),
+  });
+
+  const handleImagePick = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > 8_000_000) {
+      toast.error("Image must be under 8MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result ?? "");
+      setAdImagePreview(dataUrl);
+      setAdImageName(file.name);
+      setAdImageFileId(null);
+      upload.mutate({ dataUrl, filename: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     try {
