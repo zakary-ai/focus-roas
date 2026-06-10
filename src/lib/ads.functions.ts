@@ -1068,7 +1068,7 @@ export const createCampaignViaApi = createServerFn({ method: "POST" })
           status: "paused",
           context_hints: data.contextHints,
           bidding_config: {
-            billing_event_type: "impression",
+            billing_event_type: "click",
             max_bid_micros: data.maxCpcBidMicros,
           },
           conversion_event: "order_created",
