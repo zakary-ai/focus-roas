@@ -168,6 +168,25 @@ function CampaignBuilderPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const regenerate = useMutation({
+    mutationFn: (input: {
+      productName: string;
+      productUrl: string;
+      productDescription: string;
+      monthlyBudget: number;
+      targetAudience: string;
+    }) => regenerateFn({ data: input }),
+    onSuccess: (r) => {
+      if (result) {
+        setResult({ ...result, headlines: r.headlines, bodies: r.bodies });
+        setSelectedHeadlineIdx(0);
+        setSelectedBodyIdx(0);
+        toast.success("Copy regenerated");
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const save = useMutation({
     mutationFn: (input: {
       productName: string;
