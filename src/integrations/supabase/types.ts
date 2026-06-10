@@ -116,6 +116,42 @@ export type Database = {
         }
         Relationships: []
       }
+      shopify_orders: {
+        Row: {
+          created_at: string
+          id: string
+          landing_site: string | null
+          order_number: string | null
+          raw: Json | null
+          shopify_created_at: string | null
+          source_name: string | null
+          total_price: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          landing_site?: string | null
+          order_number?: string | null
+          raw?: Json | null
+          shopify_created_at?: string | null
+          source_name?: string | null
+          total_price?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          landing_site?: string | null
+          order_number?: string | null
+          raw?: Json | null
+          shopify_created_at?: string | null
+          source_name?: string | null
+          total_price?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           connected_account_name: string | null
