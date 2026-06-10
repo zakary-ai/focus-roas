@@ -969,8 +969,6 @@ export const regenerateCopy = createServerFn({ method: "POST" })
     return { headlines, bodies, brand };
   });
 
-const SaveBuildInput
-
 const SaveBuildInput = z.object({
   productName: z.string().min(1).max(200),
   productUrl: z.string().url().max(500),
