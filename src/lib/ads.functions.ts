@@ -810,7 +810,7 @@ export const buildCampaign = createServerFn({ method: "POST" })
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
     const systemPrompt =
-      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. Headlines must be <=60 chars. Body copy must be <=150 chars. Context hints are specific multi-word conversational phrases describing the kinds of ChatGPT conversations where this ad should appear — buyer intents, use-cases, buyer personas, product variants, and purchase contexts. Each hint is a short phrase (3-8 words), lowercased, no punctuation. Aim for 12-18 hints covering a wide range of intents: bulk/wholesale, specific use-cases (industry, profession, environment), product variants/specs, and price/quality angles.";
+      "You are a senior performance marketer writing ads for OpenAI Ads. Return strictly valid JSON. HARD LIMITS (non-negotiable): every headline must be 30 characters or fewer (count every character including spaces); every body/description must be 65 characters or fewer. Count carefully before responding and rewrite anything over the limit. Context hints are specific multi-word conversational phrases describing the kinds of ChatGPT conversations where this ad should appear — buyer intents, use-cases, buyer personas, product variants, and purchase contexts. Each hint is a short phrase (3-8 words), lowercased, no punctuation. Aim for 12-18 hints covering a wide range of intents: bulk/wholesale, specific use-cases (industry, profession, environment), product variants/specs, and price/quality angles.";
     const userPrompt = `Generate ad copy for this product.
 Product: ${data.productName}
 Description: ${data.productDescription}
@@ -819,6 +819,8 @@ Monthly budget: $${data.monthlyBudget}
 
 Example of high-performing context_hints for "blue nitrile gloves" (style reference only — generate hints specific to THIS product):
 ["buying blue nitrile gloves in bulk","powder-free nitrile gloves","disposable gloves","industrial gloves","exam gloves","PPE supplies","bulk gloves by the case","latex-free gloves","nitrile gloves for shops","nitrile gloves for cleaning companies","gloves for janitorial teams","gloves for warehouses","gloves for auto shops","gloves for food handling","gloves for maintenance crews","gloves for medical offices","wholesale nitrile gloves","case-packed gloves","affordable disposable work gloves"]
+
+Strict character limits: headlines <=30 chars, bodies <=65 chars. Do not exceed these under any circumstance.
 
 Return JSON with this exact shape:
 {"headlines":["...","...","..."],"bodies":["...","...","..."],"context_hints":["...", ... 12 to 18 phrases ...]}`;
@@ -855,15 +857,23 @@ Return JSON with this exact shape:
     } catch {
       parsed = {};
     }
-    const headlines = (parsed.headlines ?? []).slice(0, 3).map((s) => String(s).slice(0, 60));
-    const bodies = (parsed.bodies ?? []).slice(0, 3).map((s) => String(s).slice(0, 150));
+    const clampAtWord = (s: string, max: number) => {
+      const trimmed = String(s).trim().replace(/\s+/g, " ");
+      if (trimmed.length <= max) return trimmed;
+      const sliced = trimmed.slice(0, max);
+      const lastSpace = sliced.lastIndexOf(" ");
+      const base = lastSpace > Math.floor(max * 0.6) ? sliced.slice(0, lastSpace) : sliced;
+      return base.replace(/[\s\-–—,.;:!?]+$/, "");
+    };
+    const headlines = (parsed.headlines ?? []).slice(0, 3).map((s) => clampAtWord(s, 30));
+    const bodies = (parsed.bodies ?? []).slice(0, 3).map((s) => clampAtWord(s, 65));
     const context_hints = (parsed.context_hints ?? [])
       .slice(0, 20)
       .map((s) => String(s).trim().toLowerCase().slice(0, 120))
       .filter(Boolean);
 
-    while (headlines.length < 3) headlines.push(`${data.productName} — shop now`);
-    while (bodies.length < 3) bodies.push(`Discover ${data.productName}. Built for ${data.targetAudience}.`);
+    while (headlines.length < 3) headlines.push(clampAtWord(`${data.productName} — shop now`, 30));
+    while (bodies.length < 3) bodies.push(clampAtWord(`Discover ${data.productName}. Built for ${data.targetAudience}.`, 65));
     while (context_hints.length < 3) context_hints.push(data.targetAudience.split(/[,]+/)[0]?.trim().toLowerCase() ?? "buyers");
 
     const campaignName =
