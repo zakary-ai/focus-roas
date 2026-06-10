@@ -18,6 +18,7 @@ import {
   saveCampaignBuild,
   listCampaignBuilds,
   createCampaignViaApi,
+  uploadAdImage,
 } from "@/lib/ads.functions";
 
 export const Route = createFileRoute("/_authenticated/utm")({
@@ -48,6 +49,7 @@ function CampaignBuilderPage() {
   const saveFn = useServerFn(saveCampaignBuild);
   const createRemoteFn = useServerFn(createCampaignViaApi);
   const listFn = useServerFn(listCampaignBuilds);
+  const uploadFn = useServerFn(uploadAdImage);
 
   const [campaignNameInput, setCampaignNameInput] = useState("");
   const [productName, setProductName] = useState("");
@@ -64,6 +66,38 @@ function CampaignBuilderPage() {
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [remoteCampaignId, setRemoteCampaignId] = useState<string | null>(null);
   const [maxCpcBid, setMaxCpcBid] = useState<string>("3.50");
+  const [adImageFileId, setAdImageFileId] = useState<string | null>(null);
+  const [adImagePreview, setAdImagePreview] = useState<string | null>(null);
+  const [adImageName, setAdImageName] = useState<string | null>(null);
+
+  const upload = useMutation({
+    mutationFn: (input: { dataUrl: string; filename: string }) => uploadFn({ data: input }),
+    onSuccess: (res) => {
+      setAdImageFileId(res.fileId);
+      toast.success("Image uploaded");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Upload failed"),
+  });
+
+  const handleImagePick = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (file.size > 8_000_000) {
+      toast.error("Image must be under 8MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result ?? "");
+      setAdImagePreview(dataUrl);
+      setAdImageName(file.name);
+      setAdImageFileId(null);
+      upload.mutate({ dataUrl, filename: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     try {
@@ -160,6 +194,7 @@ function CampaignBuilderPage() {
       body: string;
       destinationUrl: string;
       contextHints: string[];
+      fileId: string;
     }) => createRemoteFn({ data: input }),
     onSuccess: (r) => {
       setRemoteCampaignId(r.campaignId);
@@ -472,6 +507,26 @@ function CampaignBuilderPage() {
                       />
                       <p className="text-xs text-muted-foreground">Recommended: $3.50+</p>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="adimage">Ad image</Label>
+                      <Input
+                        id="adimage"
+                        type="file"
+                        accept="image/*"
+                        className="w-56"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleImagePick(f);
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {upload.isPending
+                          ? "Uploading…"
+                          : adImageFileId
+                            ? `Uploaded: ${adImageName ?? "image"}`
+                            : "Required by OpenAI Ads"}
+                      </p>
+                    </div>
                     <Button variant="outline" onClick={saveDraft}>Save draft</Button>
                     <Button
                       onClick={() => {
@@ -484,6 +539,10 @@ function CampaignBuilderPage() {
                           toast.error("Enter a valid max CPC bid");
                           return;
                         }
+                        if (!adImageFileId) {
+                          toast.error("Upload an ad image first");
+                          return;
+                        }
                         remote.mutate({
                           campaignName: result.campaignName,
                           lifetimeBudgetMicros: result.lifetimeBudgetMicros,
@@ -492,9 +551,10 @@ function CampaignBuilderPage() {
                           body: selectedBody,
                           destinationUrl: result.utmUrl,
                           contextHints: hints.length ? hints : result.contextHints,
+                          fileId: adImageFileId,
                         });
                       }}
-                      disabled={remote.isPending}
+                      disabled={remote.isPending || upload.isPending || !adImageFileId}
                     >
                       {remote.isPending ? "Creating..." : "Create Campaign via API"}
                     </Button>
