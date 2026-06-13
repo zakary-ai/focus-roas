@@ -82,7 +82,7 @@ const sections = [
     title: "Changes and contact",
     body: [
       "We may update this policy from time to time. The latest version will be posted on this page with a revised effective date.",
-      "Questions or privacy requests can be sent to privacy@roas.ai.",
+      "Questions or privacy requests can be sent to zakary@deleo.ai.",
     ],
   },
 ];
