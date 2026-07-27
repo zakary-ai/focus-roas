@@ -1,23 +1,37 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { BarChart3, Link2, Shield, Sparkles } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+
+import landingCss from "@/components/landing/landing.css?url";
+import ScrollHero from "@/components/landing/ScrollHero";
+import HowItWorks from "@/components/landing/HowItWorks";
+import FeaturesSection from "@/components/landing/FeaturesSection";
+import SpecsSection from "@/components/landing/SpecsSection";
+import AgencySection from "@/components/landing/AgencySection";
+import ClosingCTA from "@/components/landing/ClosingCTA";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ROAS.ai — Track & Optimize Your OpenAI Ads ROAS" },
+      { title: "OpenROAS — Track OpenAI Ads Revenue in Shopify" },
       {
         name: "description",
         content:
-          "Connect your OpenAI Ads account, set up conversion tracking, and view ROAS in a single dashboard.",
+          "OpenROAS attributes Shopify orders back to the OpenAI ad click, ad, ad group, and campaign that drove them — clear ROAS for merchants and agencies.",
       },
-      { property: "og:title", content: "ROAS.ai — Track & Optimize Your OpenAI Ads ROAS" },
+      { property: "og:title", content: "OpenROAS — Track OpenAI Ads Revenue in Shopify" },
       {
         property: "og:description",
         content:
-          "Connect your OpenAI Ads account, set up conversion tracking, and view ROAS in a single dashboard.",
+          "OpenROAS attributes Shopify orders back to the OpenAI ad click, ad, ad group, and campaign that drove them — clear ROAS for merchants and agencies.",
       },
+    ],
+    links: [
+      { rel: "stylesheet", href: landingCss },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Sora:wght@500;600&display=swap",
+      },
+      // First scroll-hero frame — preload so the beach opens instantly.
+      { rel: "preload", as: "image", href: "/frames/frame_0001.jpg" },
     ],
   }),
   component: Index,
@@ -25,78 +39,112 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-accent/30">
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+    <div className="landing-root">
+      <header
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "1.4rem clamp(1.5rem, 6vw, 7rem)",
+        }}
+      >
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.6rem",
+            fontFamily: "var(--font-display)",
+            fontWeight: 600,
+            fontSize: "1.05rem",
+            color: "#fff",
+          }}
+        >
+          <span
+            style={{
+              width: "1.7rem",
+              height: "1.7rem",
+              borderRadius: "0.45rem",
+              background: "#F5A623",
+              color: "#02080D",
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.95rem",
+            }}
+          >
             R
-          </div>
-          ROAS.ai
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link to="/auth">Sign in</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/auth">Get started</Link>
-          </Button>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-6 pb-24 pt-16">
-        <section className="text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-            <Sparkles className="h-3 w-3 text-primary" /> ROAS Manager for OpenAI Ads
           </span>
-          <h1 className="mt-6 text-5xl font-bold tracking-tight md:text-6xl">
-            Know your return on every ad dollar.
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-            Connect your OpenAI Ads account, set up conversion tracking the right way, and watch
-            spend, revenue, and ROAS in one clean dashboard.
-          </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Button asChild size="lg">
-              <Link to="/auth">Start free</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          </div>
-        </section>
-        <section className="mt-24 grid gap-6 md:grid-cols-3">
-          {[
-            {
-              icon: BarChart3,
-              title: "ROAS Dashboard",
-              body: "Spend, revenue, clicks and ROAS across every campaign — in one view.",
-            },
-            {
-              icon: Link2,
-              title: "UTM Generator",
-              body: "Tag every product URL correctly so OpenAI Ads attributes revenue back to the right campaign.",
-            },
-            {
-              icon: Shield,
-              title: "Conversion Setup",
-              body: "A guided checklist to wire up the Purchase event with variable value tracking.",
-            },
-          ].map((f) => (
-            <div key={f.title} className="rounded-2xl border bg-card p-6 shadow-sm">
-              <f.icon className="h-6 w-6 text-primary" />
-              <h3 className="mt-4 text-lg font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
-            </div>
-          ))}
-        </section>
-      </main>
-      <footer className="border-t bg-background/80">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
-          <div className="font-semibold text-foreground">ROAS.ai</div>
-          <p>© {new Date().getFullYear()} ROAS.ai</p>
-          <Link to="/privacy" className="font-medium hover:text-foreground">
-            Privacy
+          OpenROAS
+        </span>
+        <nav style={{ display: "flex", alignItems: "center", gap: "1.6rem" }}>
+          <Link
+            to="/auth"
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontWeight: 500,
+              fontSize: "0.7rem",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "#fff",
+            }}
+          >
+            Sign in
           </Link>
-        </div>
+          <Link
+            to="/auth"
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontWeight: 500,
+              fontSize: "0.7rem",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              background: "#F5A623",
+              color: "#02080D",
+              padding: "0.65rem 1.4rem",
+              borderRadius: 2,
+            }}
+          >
+            Get started
+          </Link>
+        </nav>
+      </header>
+
+      <main style={{ background: "#02080D" }}>
+        <ScrollHero />
+        <HowItWorks />
+        <FeaturesSection />
+        <SpecsSection />
+        <AgencySection />
+        <ClosingCTA />
+      </main>
+
+      <footer
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          padding: "2rem clamp(1.5rem, 6vw, 7rem)",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "1rem",
+          fontFamily: "var(--font-inter)",
+          fontSize: "0.85rem",
+          color: "#7b8a96",
+        }}
+      >
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "#fff" }}>
+          OpenROAS
+        </span>
+        <span>© {new Date().getFullYear()} OpenROAS</span>
+        <Link to="/privacy" style={{ color: "#D7DCE5" }}>
+          Privacy
+        </Link>
       </footer>
     </div>
   );

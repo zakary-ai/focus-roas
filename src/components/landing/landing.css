@@ -1,0 +1,326 @@
+/* Landing page styles, ported from the openroas-landing Next.js site.
+   The original file applied `body`/`a` globals; here everything is scoped
+   under .landing-root so the rest of the app (dashboard, auth) is unaffected. */
+
+.landing-root {
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-display: "Sora", sans-serif;
+  background: #02080d;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  font-family: var(--font-inter);
+  min-height: 100vh;
+}
+
+.landing-root a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ══ Rotating sunset glow behind the dashboard ═══════════════════════════
+   A blurred conic gradient mixed from the sunset's own colors (blue sky,
+   amber horizon, teal ocean) sits behind the panel. Only the gradient ANGLE
+   animates — the element shape stays put — so the colors orbit the panel
+   counterclockwise while the halo silhouette holds steady. */
+@property --glow-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.dash-glow {
+  background: conic-gradient(
+    from var(--glow-angle),
+    rgba(74, 108, 158, 0.6) 0deg,
+    rgba(245, 166, 35, 0.6) 120deg,
+    rgba(22, 168, 176, 0.6) 240deg,
+    rgba(74, 108, 158, 0.6) 360deg
+  );
+  filter: blur(55px);
+  border-radius: 14px;
+  animation: glow-orbit 20s linear infinite;
+}
+/* Decreasing angle => gradient sweeps counterclockwise. */
+@keyframes glow-orbit {
+  to { --glow-angle: -360deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-glow { animation: none; }
+}
+
+/* ══ Composited dashboard screen (crisp final scrub payoff) ═══════════════
+   The whole dashboard is sized in `em` off one fluid container font-size, so
+   it scales to the viewer's device. It crossfades in over the last stretch of
+   the hero scrub as a pixel-perfect replacement for the soft raster frame.
+   The wrapper is positioned (via JS in ScrollHero) onto the laptop screen of the
+   final frame; the dashboard is sized in container-query units so it scales to
+   that box. On phones it goes full-bleed and reflows for readability. */
+.dash-screen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  background: #02080D;
+  color: #d7e2ea;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(7px, 1.18cqw, 15px);
+  --bd: rgba(255, 255, 255, 0.08);
+  --panel: #0a0f17;
+  --muted: #7b8a96;
+  --orange: #f5a623;
+  --cyan: #16f2e3;
+}
+.dash-screen * { box-sizing: border-box; }
+
+/* ── Sidebar ───────────────────────────────────────────────────────── */
+.dash-rail {
+  flex: 0 0 16em;
+  width: 16em;
+  border-right: 1px solid var(--bd);
+  padding: 1.15em 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1em;
+  background: rgba(255, 255, 255, 0.012);
+}
+.dash-logo { display: flex; align-items: center; gap: 0.6em; }
+.dash-logo-mark {
+  width: 1.9em; height: 1.9em;
+  border-radius: 0.5em;
+  background: var(--orange);
+  color: #02080d;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.dash-logo-text {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600; font-size: 1.15em; color: #fff;
+}
+.dash-store {
+  display: flex; align-items: center; gap: 0.55em;
+  border: 1px solid var(--bd); border-radius: 0.55em;
+  padding: 0.6em 0.7em; font-size: 0.95em;
+}
+.dash-store-ic, .dash-store-ch { color: var(--muted); }
+.dash-store-nm { flex: 1; color: #fff; font-weight: 500; }
+.dash-rail-label {
+  font-size: 0.62em; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+}
+.dash-nav { display: flex; flex-direction: column; gap: 0.15em; }
+.dash-nav-i {
+  display: flex; align-items: center; gap: 0.7em;
+  padding: 0.6em 0.7em; border-radius: 0.5em;
+  color: #9aa6b2; font-size: 0.95em;
+}
+.dash-nav-i svg { width: 1.15em; height: 1.15em; flex: 0 0 auto; }
+.dash-nav-i.on {
+  background: rgba(245, 166, 35, 0.1);
+  color: #fff;
+  box-shadow: inset 0.18em 0 0 var(--orange);
+}
+.dash-rail-foot {
+  margin-top: auto;
+  display: flex; flex-direction: column; gap: 0.6em;
+  padding-top: 1em; border-top: 1px solid var(--bd);
+  font-size: 0.92em;
+}
+.dash-plan, .dash-conn {
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--muted);
+}
+.dash-badge {
+  background: var(--orange); color: #02080d;
+  font-weight: 600; font-size: 0.85em;
+  padding: 0.15em 0.6em; border-radius: 0.4em;
+}
+.dash-conn-ok { color: var(--cyan); font-weight: 500; }
+.dash-signout { color: var(--muted); }
+
+/* ── Content column ────────────────────────────────────────────────── */
+.dash-content { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.dash-topbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 1em;
+  padding: 1em 1.5em; border-bottom: 1px solid var(--bd);
+}
+.dash-tb-title { display: flex; flex-direction: column; gap: 0.1em; }
+.dash-tb-title strong {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600; font-size: 1.15em; color: #fff;
+}
+.dash-tb-title span { font-size: 0.78em; color: var(--muted); }
+.dash-tb-right { display: flex; align-items: center; gap: 0.55em; flex-wrap: wrap; justify-content: flex-end; }
+.dash-pill {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  border: 1px solid var(--bd); border-radius: 2em;
+  padding: 0.4em 0.8em; font-size: 0.8em; color: #c7d2dc;
+}
+.dash-pill .dot {
+  width: 0.5em; height: 0.5em; border-radius: 50%;
+  background: var(--cyan); box-shadow: 0 0 0.5em rgba(22, 242, 227, 0.7);
+}
+.dash-pill.range { color: var(--muted); }
+.dash-cta {
+  background: var(--orange); color: #02080d; font-weight: 600;
+  font-size: 0.8em; padding: 0.5em 0.9em; border-radius: 0.45em;
+}
+.dash-avatar {
+  width: 2em; height: 2em; border-radius: 50%;
+  background: #1a2230; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85em; font-weight: 600;
+}
+
+.dash-scroll {
+  flex: 1 1 auto; min-height: 0;
+  padding: 1.3em 1.5em;
+  display: flex; flex-direction: column; gap: 1.1em;
+  overflow: hidden;
+}
+
+/* ── Banner + AI insights ──────────────────────────────────────────── */
+.dash-banner {
+  display: grid; grid-template-columns: 1fr 18em; gap: 1em;
+  background: var(--panel); border: 1px solid var(--bd);
+  border-radius: 0.9em; padding: 1.3em 1.5em;
+}
+.dash-eyebrow {
+  font-size: 0.66em; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--orange);
+}
+.dash-banner-main h1 {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600; font-size: 1.8em; color: #fff;
+  margin: 0.5em 0 0.8em;
+}
+.dash-chips { display: flex; flex-wrap: wrap; gap: 0.5em; }
+.dash-chips .chip {
+  font-size: 0.74em; padding: 0.32em 0.7em; border-radius: 2em;
+  border: 1px solid var(--bd); color: #c7d2dc;
+}
+.dash-chips .chip.ok {
+  color: var(--cyan); border-color: rgba(22, 242, 227, 0.3);
+  background: rgba(22, 242, 227, 0.06);
+}
+.dash-ai {
+  background: rgba(245, 166, 35, 0.06);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  border-radius: 0.7em; padding: 1em;
+  display: flex; flex-direction: column; gap: 0.45em;
+}
+.dash-ai-tag { font-size: 0.66em; color: var(--orange); letter-spacing: 0.04em; }
+.dash-ai strong { font-family: var(--font-display), sans-serif; font-weight: 600; font-size: 1.05em; color: #fff; }
+.dash-ai p { font-size: 0.8em; color: #aab4be; line-height: 1.4; }
+.dash-ai-btn {
+  margin-top: 0.3em; align-self: flex-start;
+  background: var(--orange); color: #02080d; font-weight: 600;
+  font-size: 0.76em; padding: 0.5em 0.8em; border-radius: 0.45em;
+}
+
+/* ── KPI grid ──────────────────────────────────────────────────────── */
+.dash-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8em; }
+.dash-kpi {
+  background: var(--panel); border: 1px solid var(--bd);
+  border-top: 1px solid rgba(245, 166, 35, 0.18);
+  border-radius: 0.7em; padding: 0.9em 1em;
+  display: flex; flex-direction: column; gap: 0.35em; min-width: 0;
+}
+.dash-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; }
+.dash-kpi-k { font-size: 0.74em; color: var(--muted); }
+.dash-kpi-d { font-size: 0.68em; padding: 0.1em 0.45em; border-radius: 2em; }
+.dash-kpi-d.up { color: var(--cyan); background: rgba(22, 242, 227, 0.12); }
+.dash-kpi-d.none { color: var(--muted); }
+.dash-kpi-v {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600; font-size: 1.6em; color: #fff;
+}
+.dash-kpi-spark { width: 100%; height: 1.8em; display: block; margin-top: 0.1em; }
+
+/* ── Charts ────────────────────────────────────────────────────────── */
+.dash-charts {
+  display: grid; grid-template-columns: 2fr 1fr; gap: 0.8em;
+  flex: 1 1 auto; min-height: 0;
+}
+.dash-panel {
+  background: var(--panel); border: 1px solid var(--bd);
+  border-radius: 0.7em; padding: 0.9em 1.1em;
+  display: flex; flex-direction: column; gap: 0.6em; min-height: 0;
+}
+.dash-panel-top { display: flex; align-items: center; justify-content: space-between; }
+.dash-panel-top strong { font-size: 0.88em; color: #fff; font-weight: 600; }
+.dash-legend { display: flex; align-items: center; gap: 0.4em; font-size: 0.72em; color: var(--muted); }
+.dash-legend i { width: 1em; height: 0.18em; border-radius: 1em; display: inline-block; }
+.lg-rev { background: var(--cyan); }
+.lg-spend { background: var(--orange); }
+.dash-bigchart { flex: 1 1 auto; width: 100%; min-height: 6em; display: block; }
+.dash-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }
+.dash-xaxis { display: flex; justify-content: space-between; font-size: 0.66em; color: var(--muted); }
+.dash-side-col { display: flex; flex-direction: column; gap: 0.8em; min-height: 0; }
+.dash-side-col .dash-panel { flex: 1 1 0; }
+.dash-roas { flex: 1 1 auto; width: 100%; min-height: 3em; }
+.dash-bars { flex: 1 1 auto; display: flex; align-items: flex-end; gap: 0.18em; min-height: 3em; }
+.dash-bars i {
+  flex: 1 1 0; display: block;
+  background: linear-gradient(to top, var(--orange), #ffc15e);
+  border-radius: 0.12em 0.12em 0 0;
+}
+
+/* ── Screen finish ─────────────────────────────────────────────────── */
+.dash-glare {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0%, transparent 24%, transparent 74%, rgba(255, 255, 255, 0.03) 100%);
+  mix-blend-mode: screen;
+}
+.dash-vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 12em 2em rgba(2, 8, 13, 0.55);
+}
+
+/* ── Entrance animations (play once the camera lands on the screen) ──── */
+.dash-line { stroke-dasharray: 1600; stroke-dashoffset: 1600; }
+.dash-area { opacity: 0; }
+.dash-kpi { opacity: 0; transform: translateY(0.9em); }
+.dash-bars i { transform: scaleY(0); transform-origin: bottom; }
+
+.dash-in .dash-line-rev { animation: dashDraw 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.dash-in .dash-line-spend { animation: dashDraw 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards; }
+.dash-in .dash-line-roas { animation: dashDraw 1.4s ease 0.3s forwards; }
+.dash-in .dash-area { animation: dashFade 1.3s ease 0.4s forwards; }
+.dash-in .dash-kpi { animation: dashRise 0.55s ease forwards; }
+.dash-in .dash-kpi:nth-child(1) { animation-delay: 0.04s; }
+.dash-in .dash-kpi:nth-child(2) { animation-delay: 0.1s; }
+.dash-in .dash-kpi:nth-child(3) { animation-delay: 0.16s; }
+.dash-in .dash-kpi:nth-child(4) { animation-delay: 0.22s; }
+.dash-in .dash-kpi:nth-child(5) { animation-delay: 0.28s; }
+.dash-in .dash-kpi:nth-child(6) { animation-delay: 0.34s; }
+.dash-in .dash-kpi:nth-child(7) { animation-delay: 0.4s; }
+.dash-in .dash-kpi:nth-child(8) { animation-delay: 0.46s; }
+.dash-in .dash-bars i { animation: dashGrow 0.5s ease 0.4s forwards; }
+
+@keyframes dashDraw { to { stroke-dashoffset: 0; } }
+@keyframes dashFade { to { opacity: 1; } }
+@keyframes dashRise { to { opacity: 1; transform: none; } }
+@keyframes dashGrow { to { transform: scaleY(1); } }
+
+/* ── Responsive: collapse to a phone-friendly screen ───────────────── */
+@media (max-width: 900px) {
+  .dash-screen { font-size: clamp(9px, 3.2cqw, 14px); }
+  .dash-rail { display: none; }
+  .dash-topbar { padding: 0.9em 1em; }
+  .dash-tb-right .dash-pill.range,
+  .dash-tb-right .dash-cta { display: none; }
+  .dash-scroll { padding: 1em; gap: 0.9em; }
+  .dash-banner { grid-template-columns: 1fr; }
+  .dash-ai { display: none; }
+  .dash-kpis { grid-template-columns: repeat(2, 1fr); }
+  .dash-charts { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-line { stroke-dashoffset: 0; }
+  .dash-area, .dash-kpi { opacity: 1; transform: none; }
+  .dash-bars i { transform: none; }
+}
