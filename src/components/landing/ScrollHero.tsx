@@ -253,7 +253,8 @@ export default function ScrollHero() {
               show: { transition: { delayChildren: 0.8, staggerChildren: 0.12 } },
             }}
             style={{
-              padding: 'clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(4rem, 10vw, 8rem)',
+              padding:
+                'clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(2rem, min(10vw, 9vh), 8rem)',
               maxWidth: 760,
             }}
           >
@@ -281,10 +282,13 @@ export default function ScrollHero() {
               style={{
                 fontFamily: 'var(--font-display)',
                 fontWeight: 600,
-                fontSize: 'clamp(2.4rem, 6vw, 5.5rem)',
+                // Cap by viewport height too: on short/wide screens a purely
+                // vw-sized headline overflows the bottom-anchored copy block
+                // upward into the fixed header.
+                fontSize: 'clamp(2rem, min(6vw, 9vh), 5.5rem)',
                 lineHeight: 1.02,
                 letterSpacing: '-0.02em',
-                marginBottom: '1.5rem',
+                marginBottom: 'clamp(0.9rem, 2.5vh, 1.5rem)',
               }}
             >
               See which OpenAI Ads drive Shopify sales.
@@ -301,7 +305,7 @@ export default function ScrollHero() {
                 lineHeight: 1.6,
                 color: '#D7DCE5',
                 maxWidth: 480,
-                marginBottom: '2.25rem',
+                marginBottom: 'clamp(1.25rem, 3.5vh, 2.25rem)',
               }}
             >
               OpenROAS connects your OpenAI ad clicks to real Shopify orders — so you
