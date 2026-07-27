@@ -512,8 +512,11 @@
 .landing-root .lp-journey-link {
   position: absolute;
   top: 34px;
-  right: calc(-50% + 34px);
-  left: calc(50% + 34px);
+  /* The icon box is left-aligned in its column (0.7rem padding, 68px wide):
+     run the line from this box's right edge into the next node so it meets
+     the next box's left edge with no gap. */
+  left: calc(0.7rem + 68px);
+  right: -0.7rem;
   height: 2px;
   background: linear-gradient(90deg, rgba(245, 166, 35, 0.4), rgba(22, 242, 227, 0.4));
 }
