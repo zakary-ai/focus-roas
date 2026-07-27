@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { motion, useMotionValue, useMotionValueEvent, useTransform } from 'framer-motion';
-import { FRAME_COUNT } from './frameConfig';
-import DashboardScreen from './DashboardScreen';
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { motion, useMotionValue, useMotionValueEvent, useTransform } from "framer-motion";
+import { FRAME_COUNT } from "./frameConfig";
+import DashboardScreen from "./DashboardScreen";
+import { BOOK_CALL_URL } from "./shared";
 
-const ACCENT = '#F5A623';
-const CYAN = '#16F2E3';
-const BG = '#02080D';
+const ACCENT = "#F5A623";
+const CYAN = "#16F2E3";
+const BG = "#02080D";
 const ease = [0.16, 1, 0.3, 1] as const;
 
 // The push-in finishes centering the laptop by this scroll fraction; the dashboard
@@ -15,7 +16,7 @@ const FRAME_END = 0.72;
 
 function framePath(i: number) {
   // 1-indexed, 4-digit zero-padded: frame_0001.jpg
-  return `/frames/frame_${String(i + 1).padStart(4, '0')}.jpg`;
+  return `/frames/frame_${String(i + 1).padStart(4, "0")}.jpg`;
 }
 
 export default function ScrollHero() {
@@ -34,7 +35,7 @@ export default function ScrollHero() {
   const dashOpacity = useTransform(progress, [0.6, 0.8], [0, 1]);
   const [dashActive, setDashActive] = useState(false);
   // Trigger the in-place entrance animations as the dashboard begins to appear.
-  useMotionValueEvent(progress, 'change', (p) => setDashActive(p >= 0.6));
+  useMotionValueEvent(progress, "change", (p) => setDashActive(p >= 0.6));
 
   // The laptop background is gone by the time the dashboard shows, so center it
   // in the viewport and scale to fit (16:9), keeping a margin so the glow has
@@ -65,21 +66,21 @@ export default function ScrollHero() {
       });
     };
     compute();
-    window.addEventListener('resize', compute);
-    return () => window.removeEventListener('resize', compute);
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // The hero must always open on frame 0 (the beach). Stop the browser from
     // restoring a prior scroll position on reload, which would otherwise flash a
     // late dashboard frame before snapping back to the top.
-    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
     const images: HTMLImageElement[] = new Array(FRAME_COUNT);
     let loadedCount = 0;
@@ -162,29 +163,29 @@ export default function ScrollHero() {
       ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
       render(currentIdx >= 0 ? currentIdx : desiredIdx);
     };
-    window.addEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
 
     return () => {
       cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener("resize", onResize);
     };
   }, [progress]);
 
   return (
-    <div ref={containerRef} style={{ height: '200vh', position: 'relative' }}>
+    <div ref={containerRef} style={{ height: "200vh", position: "relative" }}>
       <div
         style={{
-          position: 'sticky',
+          position: "sticky",
           top: 0,
-          width: '100vw',
-          height: '100vh',
-          overflow: 'hidden',
+          width: "100vw",
+          height: "100vh",
+          overflow: "hidden",
           background: BG,
         }}
       >
         <motion.canvas
           ref={canvasRef}
-          style={{ display: 'block', width: '100%', height: '100%', opacity: canvasOpacity }}
+          style={{ display: "block", width: "100%", height: "100%", opacity: canvasOpacity }}
         />
 
         {/* Sunset glow halo — sits behind the panel and slowly orbits its
@@ -192,10 +193,10 @@ export default function ScrollHero() {
         <motion.div
           className="dash-glow"
           style={{
-            position: 'absolute',
+            position: "absolute",
             ...dashStyle,
             opacity: dashOpacity,
-            pointerEvents: 'none',
+            pointerEvents: "none",
           }}
         />
 
@@ -205,13 +206,13 @@ export default function ScrollHero() {
         <motion.div
           className="dash-frame"
           style={{
-            position: 'absolute',
+            position: "absolute",
             ...dashStyle,
-            containerType: 'size',
+            containerType: "size",
             opacity: dashOpacity,
             borderRadius: 8,
-            overflow: 'hidden',
-            pointerEvents: 'none',
+            overflow: "hidden",
+            pointerEvents: "none",
           }}
         >
           <DashboardScreen active={dashActive} />
@@ -220,29 +221,29 @@ export default function ScrollHero() {
         {/* Gradient + copy overlay */}
         <motion.div
           style={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'flex-end',
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
             opacity: heroOpacity,
             background:
-              'linear-gradient(to top, rgba(2,8,13,0.92) 0%, rgba(2,8,13,0.45) 45%, transparent 100%)',
-            pointerEvents: 'none',
+              "linear-gradient(to top, rgba(2,8,13,0.92) 0%, rgba(2,8,13,0.45) 45%, transparent 100%)",
+            pointerEvents: "none",
           }}
         >
           {/* Tasteful cyan/orange glow anchored behind the CTA area */}
           <div
             style={{
-              position: 'absolute',
-              left: 'clamp(-4rem, 2vw, 4rem)',
-              bottom: 'clamp(2rem, 8vw, 7rem)',
-              width: 'min(70vw, 640px)',
-              height: 'min(40vh, 360px)',
+              position: "absolute",
+              left: "clamp(-4rem, 2vw, 4rem)",
+              bottom: "clamp(2rem, 8vw, 7rem)",
+              width: "min(70vw, 640px)",
+              height: "min(40vh, 360px)",
               background:
-                'radial-gradient(60% 60% at 30% 70%, rgba(22,242,227,0.16) 0%, transparent 70%), radial-gradient(55% 55% at 55% 60%, rgba(245,166,35,0.18) 0%, transparent 72%)',
-              filter: 'blur(40px)',
-              pointerEvents: 'none',
+                "radial-gradient(60% 60% at 30% 70%, rgba(22,242,227,0.16) 0%, transparent 70%), radial-gradient(55% 55% at 55% 60%, rgba(245,166,35,0.18) 0%, transparent 72%)",
+              filter: "blur(40px)",
+              pointerEvents: "none",
             }}
           />
           <motion.div
@@ -254,7 +255,7 @@ export default function ScrollHero() {
             }}
             style={{
               padding:
-                'clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(2rem, min(10vw, 9vh), 8rem)',
+                "clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(2rem, min(10vw, 9vh), 8rem)",
               maxWidth: 760,
             }}
           >
@@ -264,15 +265,15 @@ export default function ScrollHero() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.8, ease } },
               }}
               style={{
-                fontFamily: 'var(--font-inter)',
-                fontSize: '0.65rem',
-                letterSpacing: '0.25em',
-                textTransform: 'uppercase',
+                fontFamily: "var(--font-inter)",
+                fontSize: "0.65rem",
+                letterSpacing: "0.25em",
+                textTransform: "uppercase",
                 color: CYAN,
-                marginBottom: '1.25rem',
+                marginBottom: "1.25rem",
               }}
             >
-              OpenAI Ads Attribution for Shopify
+              ChatGPT Ads Management + Measurement
             </motion.p>
             <motion.h1
               variants={{
@@ -280,18 +281,18 @@ export default function ScrollHero() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.9, ease } },
               }}
               style={{
-                fontFamily: 'var(--font-display)',
+                fontFamily: "var(--font-display)",
                 fontWeight: 600,
                 // Cap by viewport height too: on short/wide screens a purely
                 // vw-sized headline overflows the bottom-anchored copy block
                 // upward into the fixed header.
-                fontSize: 'clamp(2rem, min(6vw, 9vh), 5.5rem)',
+                fontSize: "clamp(2rem, min(6vw, 9vh), 5.5rem)",
                 lineHeight: 1.02,
-                letterSpacing: '-0.02em',
-                marginBottom: 'clamp(0.9rem, 2.5vh, 1.5rem)',
+                letterSpacing: "-0.02em",
+                marginBottom: "clamp(0.9rem, 2.5vh, 1.5rem)",
               }}
             >
-              See which OpenAI Ads drive Shopify sales.
+              Turn ChatGPT Ads into a measurable growth channel.
             </motion.h1>
             <motion.p
               variants={{
@@ -299,63 +300,81 @@ export default function ScrollHero() {
                 show: { opacity: 1, y: 0, transition: { duration: 0.9, ease } },
               }}
               style={{
-                fontFamily: 'var(--font-inter)',
+                fontFamily: "var(--font-inter)",
                 fontWeight: 300,
-                fontSize: '1.05rem',
+                fontSize: "1.05rem",
                 lineHeight: 1.6,
-                color: '#D7DCE5',
+                color: "#D7DCE5",
                 maxWidth: 480,
-                marginBottom: 'clamp(1.25rem, 3.5vh, 2.25rem)',
+                marginBottom: "clamp(1.25rem, 3.5vh, 2.25rem)",
               }}
             >
-              OpenROAS connects your OpenAI ad clicks to real Shopify orders — so you
-              can attribute revenue down to the campaign, ad group, ad, and click.
+              OpenROAS plans, launches, tracks, and optimizes your ChatGPT Ads from the first
+              impression to the final conversion — campaign management, conversion-focused landing
+              pages, tracking infrastructure, business system integrations, and clear analytics in
+              one complete growth system.
             </motion.p>
             <motion.div
               variants={{
                 hidden: { opacity: 0, y: 20 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.9, ease } },
               }}
-              style={{ display: 'flex', gap: '0.9rem', flexWrap: 'wrap' }}
+              style={{ display: "flex", gap: "0.9rem", flexWrap: "wrap" }}
             >
               <a
-                href="/auth"
+                href={BOOK_CALL_URL}
                 style={{
-                  display: 'inline-block',
+                  display: "inline-block",
                   background: ACCENT,
                   color: BG,
-                  fontFamily: 'var(--font-inter)',
+                  fontFamily: "var(--font-inter)",
                   fontWeight: 500,
-                  fontSize: '0.7rem',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  padding: '0.9rem 2.6rem',
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  padding: "0.9rem 2.6rem",
                   borderRadius: 2,
-                  pointerEvents: 'auto',
+                  pointerEvents: "auto",
                 }}
               >
-                Add to Shopify
+                Book a Strategy Call
               </a>
               <a
-                href="#how"
+                href="#system"
                 style={{
-                  display: 'inline-block',
-                  background: 'transparent',
-                  color: '#fff',
-                  fontFamily: 'var(--font-inter)',
+                  display: "inline-block",
+                  background: "transparent",
+                  color: "#fff",
+                  fontFamily: "var(--font-inter)",
                   fontWeight: 500,
-                  fontSize: '0.7rem',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  padding: '0.9rem 2.2rem',
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  padding: "0.9rem 2.2rem",
                   borderRadius: 2,
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  pointerEvents: 'auto',
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  pointerEvents: "auto",
                 }}
               >
-                See how it works
+                Explore the OpenROAS System
               </a>
             </motion.div>
+            <motion.p
+              variants={{
+                hidden: { opacity: 0, y: 16 },
+                show: { opacity: 1, y: 0, transition: { duration: 0.9, ease } },
+              }}
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: "0.66rem",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                color: "#7b8a96",
+                marginTop: "1.4rem",
+              }}
+            >
+              Strategy • Campaign Setup • Tracking • Optimization • Reporting
+            </motion.p>
           </motion.div>
         </motion.div>
       </div>
