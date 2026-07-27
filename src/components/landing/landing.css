@@ -8,7 +8,9 @@
   background: #02080d;
   color: #fff;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  /* `hidden` would make this a scroll container and break the hero's
+     position: sticky pin — `clip` cuts horizontal overflow without that. */
+  overflow-x: clip;
   font-family: var(--font-inter);
   min-height: 100vh;
 }
