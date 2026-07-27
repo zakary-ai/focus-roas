@@ -46,15 +46,6 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const navLinkStyle = {
-  fontFamily: "var(--font-inter)",
-  fontWeight: 500,
-  fontSize: "0.7rem",
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
-  color: "#fff",
-} as const;
-
 const anchors: [string, string][] = [
   ["Services", "#services"],
   ["Tracking & Integrations", "#tracking"],
@@ -65,50 +56,12 @@ const anchors: [string, string][] = [
 function Index() {
   return (
     <div className="landing-root">
-      <header
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 10,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          padding: "1.4rem clamp(1.5rem, 6vw, 7rem)",
-        }}
-      >
-        <a
-          href="#top"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.6rem",
-            fontFamily: "var(--font-display)",
-            fontWeight: 600,
-            fontSize: "1.05rem",
-            color: "#fff",
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              width: "1.7rem",
-              height: "1.7rem",
-              borderRadius: "0.45rem",
-              background: "#F5A623",
-              color: "#02080D",
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.95rem",
-            }}
-          >
+      <header className="lp-header">
+        <a href="#top" className="lp-logo" aria-label="OpenROAS — back to top">
+          <span aria-hidden className="lp-logo-mark">
             R
           </span>
-          OpenROAS
+          <span className="lp-logo-text">OpenROAS</span>
         </a>
         <nav className="lp-nav-links" aria-label="Main">
           {anchors.map(([label, href]) => (
@@ -116,22 +69,10 @@ function Index() {
               {label}
             </a>
           ))}
-          <Link to="/auth" style={navLinkStyle}>
+          <Link to="/auth" className="lp-nav-login">
             Client Login
           </Link>
-          <a
-            href={BOOK_CALL_URL}
-            className="lp-cta-primary"
-            style={{
-              ...navLinkStyle,
-              background: "#F5A623",
-              color: "#02080D",
-              border: "1px solid #F5A623",
-              padding: "0.65rem 1.4rem",
-              borderRadius: 2,
-              whiteSpace: "nowrap",
-            }}
-          >
+          <a href={BOOK_CALL_URL} className="lp-cta-primary lp-nav-cta">
             Book a Strategy Call
           </a>
         </nav>

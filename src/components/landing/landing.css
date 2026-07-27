@@ -9,7 +9,11 @@
   color: #fff;
   -webkit-font-smoothing: antialiased;
   /* `hidden` would make this a scroll container and break the hero's
-     position: sticky pin — `clip` cuts horizontal overflow without that. */
+     position: sticky pin — `clip` cuts horizontal overflow without that.
+     position: relative makes this the containing block for the absolutely
+     positioned header, so the clip actually applies to it; otherwise an
+     overflowing header widens the page on phones (white edge strip). */
+  position: relative;
   overflow-x: clip;
   font-family: var(--font-inter);
   min-height: 100vh;
@@ -785,4 +789,78 @@
   .landing-root .lp-cta-primary {
     transition: none !important;
   }
+}
+
+/* ══ Header + mobile optimization ═══════════════════════════════════════ */
+/* The header is styled via classes (not inline) so media queries can
+   adapt it on phones. */
+.landing-root .lp-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem clamp(1rem, 6vw, 7rem);
+}
+.landing-root .lp-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #fff;
+  flex: 0 0 auto;
+}
+.landing-root .lp-logo-mark {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 0.45rem;
+  background: #f5a623;
+  color: #02080d;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+.landing-root .lp-nav-login {
+  font-family: var(--font-inter);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+.landing-root .lp-nav-cta {
+  font-family: var(--font-inter);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: #f5a623;
+  color: #02080d;
+  border: 1px solid #f5a623;
+  padding: 0.65rem 1.4rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .landing-root .lp-header { padding: 1rem; gap: 0.75rem; }
+  .landing-root .lp-nav-links { gap: 0.85rem; }
+  .landing-root .lp-nav-login { font-size: 0.62rem; letter-spacing: 0.12em; }
+  .landing-root .lp-nav-cta {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    padding: 0.55rem 0.85rem;
+  }
+}
+@media (max-width: 460px) {
+  /* Keep the header on one uncrowded row: mark-only logo on small phones. */
+  .landing-root .lp-logo-text { display: none; }
 }
