@@ -122,23 +122,12 @@ export default function ComparisonSection() {
                     gap: "0.6rem",
                   }}
                 >
-                  <span
+                  <img
+                    src="/logo.png"
+                    alt=""
                     aria-hidden
-                    style={{
-                      width: "1.5rem",
-                      height: "1.5rem",
-                      borderRadius: 6,
-                      background: ACCENT,
-                      color: "#02080D",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    R
-                  </span>
+                    style={{ width: "1.6rem", height: "1.6rem", objectFit: "contain" }}
+                  />
                   The OpenROAS System
                 </h3>
                 <ul

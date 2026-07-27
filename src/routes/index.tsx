@@ -41,6 +41,8 @@ export const Route = createFileRoute("/")({
       },
       // First scroll-hero frame — preload so the beach opens instantly.
       { rel: "preload", as: "image", href: "/frames/frame_0001.jpg" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
   }),
   component: Index,
@@ -58,9 +60,7 @@ function Index() {
     <div className="landing-root">
       <header className="lp-header">
         <a href="#top" className="lp-logo" aria-label="OpenROAS — back to top">
-          <span aria-hidden className="lp-logo-mark">
-            R
-          </span>
+          <img src="/logo.png" alt="" className="lp-logo-img" />
           <span className="lp-logo-text">OpenROAS</span>
         </a>
         <nav className="lp-nav-links" aria-label="Main">
@@ -110,7 +110,17 @@ function Index() {
           color: "#7b8a96",
         }}
       >
-        <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "#fff" }}>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            fontFamily: "var(--font-display)",
+            fontWeight: 600,
+            color: "#fff",
+          }}
+        >
+          <img src="/logo.png" alt="" className="lp-logo-img" />
           OpenROAS
         </span>
         <nav

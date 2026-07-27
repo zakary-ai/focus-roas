@@ -64,7 +64,7 @@ export default function DashboardScreen({ active }: { active: boolean }) {
       {/* ── Sidebar ─────────────────────────────────────────────── */}
       <aside className="dash-rail">
         <div className="dash-logo">
-          <span className="dash-logo-mark">R</span>
+          <img src="/logo.png" alt="" className="dash-logo-mark-img" />
           <span className="dash-logo-text">OpenROAS</span>
         </div>
 

@@ -864,3 +864,20 @@
   /* Keep the header on one uncrowded row: mark-only logo on small phones. */
   .landing-root .lp-logo-text { display: none; }
 }
+
+/* ── Rocket logo image marks ── */
+.landing-root .lp-logo-img {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
+/* em-scaled variant for the hero's composited dashboard screen */
+.dash-logo-mark-img {
+  width: 2.1em;
+  height: 2.1em;
+  object-fit: contain;
+  display: block;
+  flex: 0 0 auto;
+}
