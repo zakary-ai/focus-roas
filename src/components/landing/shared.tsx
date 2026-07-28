@@ -16,8 +16,8 @@ export const ACCENT_BORDER_SOFT = "rgba(245,166,35,0.10)";
 
 export const ease = [0.25, 0, 0, 1] as const;
 
-/* Single place to swap in a real scheduling link (Calendly etc.). */
-export const BOOK_CALL_URL = "mailto:zakary@deleo.ai?subject=ChatGPT%20Ads%20strategy%20call";
+/* Scheduling link used by every "Book a Strategy Call" CTA. */
+export const BOOK_CALL_URL = "https://calendly.com/zakary-deleo/open-roas-discovery-call";
 
 export const stagger: Variants = {
   hidden: {},
