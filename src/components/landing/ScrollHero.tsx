@@ -255,7 +255,7 @@ export default function ScrollHero() {
             }}
             style={{
               padding:
-                "clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(2rem, min(10vw, 9vh), 8rem)",
+                "clamp(2.5rem, 7vw, 6rem) clamp(1.5rem, 6vw, 7rem) clamp(1.75rem, min(8vw, 6vh), 6rem)",
               maxWidth: 760,
             }}
           >
@@ -270,7 +270,7 @@ export default function ScrollHero() {
                 letterSpacing: "0.25em",
                 textTransform: "uppercase",
                 color: CYAN,
-                marginBottom: "1.25rem",
+                marginBottom: "clamp(0.7rem, 1.8vh, 1.25rem)",
               }}
             >
               ChatGPT Ads Management + Measurement
@@ -286,10 +286,10 @@ export default function ScrollHero() {
                 // Cap by viewport height too: on short/wide screens a purely
                 // vw-sized headline overflows the bottom-anchored copy block
                 // upward into the fixed header.
-                fontSize: "clamp(2rem, min(6vw, 9vh), 5.5rem)",
+                fontSize: "clamp(1.9rem, min(5.5vw, 8vh), 5rem)",
                 lineHeight: 1.02,
                 letterSpacing: "-0.02em",
-                marginBottom: "clamp(0.9rem, 2.5vh, 1.5rem)",
+                marginBottom: "clamp(0.8rem, 2.2vh, 1.4rem)",
               }}
             >
               Turn ChatGPT Ads into a measurable growth channel.
@@ -302,11 +302,11 @@ export default function ScrollHero() {
               style={{
                 fontFamily: "var(--font-inter)",
                 fontWeight: 300,
-                fontSize: "1.05rem",
-                lineHeight: 1.6,
+                fontSize: "clamp(0.88rem, 2.1vh, 1.02rem)",
+                lineHeight: 1.55,
                 color: "#D7DCE5",
-                maxWidth: 480,
-                marginBottom: "clamp(1.25rem, 3.5vh, 2.25rem)",
+                maxWidth: 500,
+                marginBottom: "clamp(1rem, 3vh, 2rem)",
               }}
             >
               OpenROAS plans, launches, tracks, and optimizes your ChatGPT Ads from the first
@@ -366,11 +366,11 @@ export default function ScrollHero() {
               }}
               style={{
                 fontFamily: "var(--font-inter)",
-                fontSize: "0.66rem",
+                fontSize: "0.62rem",
                 letterSpacing: "0.2em",
                 textTransform: "uppercase",
                 color: "#7b8a96",
-                marginTop: "1.4rem",
+                marginTop: "clamp(0.9rem, 2.2vh, 1.4rem)",
               }}
             >
               Strategy • Campaign Setup • Tracking • Optimization • Reporting

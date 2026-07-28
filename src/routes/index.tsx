@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { MotionConfig } from "framer-motion";
 
 import landingCss from "@/components/landing/landing.css?url";
@@ -15,7 +15,9 @@ import ComparisonSection from "@/components/landing/ComparisonSection";
 import IdealClients from "@/components/landing/IdealClients";
 import ProcessTimeline from "@/components/landing/ProcessTimeline";
 import FinalCTA from "@/components/landing/FinalCTA";
-import { BOOK_CALL_URL } from "@/components/landing/shared";
+import SiteHeader from "@/components/landing/SiteHeader";
+import SiteFooter from "@/components/landing/SiteFooter";
+import { SITE_URL } from "@/components/landing/shared";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,6 +34,8 @@ export const Route = createFileRoute("/")({
         content:
           "OpenROAS plans, launches, tracks, and optimizes ChatGPT Ads — campaign management, landing pages, tracking, integrations, and analytics in one complete growth system.",
       },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE_URL}/` },
     ],
     links: [
       { rel: "stylesheet", href: landingCss },
@@ -43,41 +47,16 @@ export const Route = createFileRoute("/")({
       { rel: "preload", as: "image", href: "/frames/frame_0001.jpg" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
+      { rel: "canonical", href: `${SITE_URL}/` },
     ],
   }),
   component: Index,
 });
 
-const anchors: [string, string][] = [
-  ["Services", "#services"],
-  ["Tracking & Integrations", "#tracking"],
-  ["Analytics", "#analytics"],
-  ["How It Works", "#how"],
-];
-
 function Index() {
   return (
     <div className="landing-root">
-      <header className="lp-header">
-        <a href="#top" className="lp-logo" aria-label="OpenROAS — back to top">
-          <img src="/logo.png" alt="" className="lp-logo-img" />
-          <span className="lp-logo-text">OpenROAS</span>
-        </a>
-        <nav className="lp-nav-links" aria-label="Main">
-          {anchors.map(([label, href]) => (
-            <a key={href} href={href} className="lp-nav-anchor">
-              {label}
-            </a>
-          ))}
-          <Link to="/auth" className="lp-nav-login">
-            Client Login
-          </Link>
-          <a href={BOOK_CALL_URL} className="lp-cta-primary lp-nav-cta">
-            Book a Strategy Call
-          </a>
-        </nav>
-      </header>
-
+      <SiteHeader />
       <main id="top" style={{ background: "#02080D" }}>
         <ScrollHero />
         <MotionConfig reducedMotion="user">
@@ -95,52 +74,7 @@ function Index() {
           <FinalCTA />
         </MotionConfig>
       </main>
-
-      <footer
-        style={{
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          padding: "2.5rem clamp(1.5rem, 6vw, 7rem)",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1.25rem",
-          fontFamily: "var(--font-inter)",
-          fontSize: "0.85rem",
-          color: "#7b8a96",
-        }}
-      >
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            fontFamily: "var(--font-display)",
-            fontWeight: 600,
-            color: "#fff",
-          }}
-        >
-          <img src="/logo.png" alt="" className="lp-logo-img" />
-          OpenROAS
-        </span>
-        <nav
-          aria-label="Footer"
-          style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", alignItems: "center" }}
-        >
-          {anchors.map(([label, href]) => (
-            <a key={href} href={href} style={{ color: "#D7DCE5" }}>
-              {label}
-            </a>
-          ))}
-          <Link to="/auth" style={{ color: "#D7DCE5" }}>
-            Client Login
-          </Link>
-          <Link to="/privacy" style={{ color: "#D7DCE5" }}>
-            Privacy
-          </Link>
-        </nav>
-        <span>© {new Date().getFullYear()} OpenROAS</span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

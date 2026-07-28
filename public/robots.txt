@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /onboarding
+Disallow: /conversions
+Disallow: /utm
+Disallow: /auth
+
+Sitemap: https://openroas.app/sitemap.xml

@@ -192,3 +192,6 @@ export function MicroLabel({ children, color = MUTED }: { children: ReactNode; c
     </span>
   );
 }
+
+/* Canonical production origin — used for SEO canonicals, OG urls, JSON-LD. */
+export const SITE_URL = "https://openroas.app";

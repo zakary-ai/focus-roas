@@ -881,3 +881,13 @@
   display: block;
   flex: 0 0 auto;
 }
+
+/* ── Blog post cards ── */
+.landing-root .lp-post-card {
+  transition: background 0.25s;
+  display: block;
+}
+.landing-root .lp-post-card:hover,
+.landing-root .lp-post-card:focus-visible {
+  background: rgba(245, 166, 35, 0.05);
+}
